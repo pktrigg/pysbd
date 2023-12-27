@@ -1,0 +1,19 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python",
+            "type": "python",
+            "request": "launch",
+            "stopOnEntry": false,
+            "program": "${file}",
+            "python": "python.exe",
+            "debugOptions": [
+                "WaitOnAbnormalExit",
+                "RedirectOutput"
+            ],
+            "args": ["-i", "Z:/SBC_Shell_Mauritania-P19014/9_Backskatter_Data/00_20_055/040719/190704000606.SDB", "-s", "10", "-ta", "-epsg", "32628"]
+        }
+   ]
+}
+
