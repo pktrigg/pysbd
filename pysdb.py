@@ -130,7 +130,7 @@ class SBDFILEHDR:
 			sensorname = s[0].decode('utf-8').rstrip('\x00')
 
 			#we do not know what these contain yet so skip them
-			msg_fmt = '=112h'
+			msg_fmt = '=l110h'
 			msg_len = struct.calcsize(msg_fmt)
 			msg_unpack = struct.Struct(msg_fmt).unpack_from
 			data = fileptr.read(msg_len)
@@ -143,7 +143,7 @@ class SBDFILEHDR:
 
 			sensor = SENSOR(id, sensorname)
 			# self.fileSize = fileptr.seek(224, 1)
-			print (sensor.name)
+			print (id, sensor.name)
 
 			self.sensors[sensorname] = sensor
 
@@ -276,6 +276,7 @@ class SBDReader:
 		msgunixtimeseconds 			= s[0]
 		msgunixtimemicroseconds 			= s[1]
 		msgtimestamp = msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
+		print (msgtimestamp)
 		msglen 						= s[2] - 20 #we know this works...!!!!
 
 		# msglen 			= s[4] - 20 #we know this works...!!!!
@@ -287,11 +288,11 @@ class SBDReader:
 		msg_len = struct.calcsize(msg_fmt)
 		msg_unpack = struct.Struct(msg_fmt).unpack_from
 
-		print ("Reading %d bytes" % (msg_len))
+		# print ("Reading %d bytes" % (msg_len))
 		data = self.fileptr.read(msg_len)
-		s = msg_unpack(data)
+		s1 = msg_unpack(data)
 		# msg=s[0].decode('utf-8').rstrip('\x00')
-		print(s[0])
+		# print(s[0])
 
 		return ping
 
