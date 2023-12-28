@@ -18,7 +18,9 @@ from glob import glob
 import fnmatch
 import numpy as np
 import geodetic
+from pynmeagps import NMEAReader
 
+###############################################################################
 def main():
 	filename = "C:/ggtools/pysdb/J129N032.SBD"
 	#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  The reader will read the initial header so we can get to grips with the file contents with ease.
@@ -291,8 +293,11 @@ class SBDReader:
 		# print ("Reading %d bytes" % (msg_len))
 		data = self.fileptr.read(msg_len)
 		s1 = msg_unpack(data)
-		# msg=s[0].decode('utf-8').rstrip('\x00')
+		msg=s1[0].decode('utf-8').rstrip('\x00')
 		# print(s[0])
+
+		msg = NMEAReader.parse(msg,VALCKSUM=0,)
+		print(msg)
 
 		return ping
 
