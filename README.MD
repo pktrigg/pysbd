@@ -14,15 +14,21 @@ Done
 * load list of sensors
 * main loop to iterate thru records
 * parse timestamp on each record
-
+* header for sensors seem to parse ok.
+* parse port config for each sensor
+* parse offsets for each sensor
+* parse sensor name, category, type
+* parse data start byte so we can jump to first datagram
+* parsing of datagrams in place.  we can now parse nmea datagrams ok
+* extract navigation from nmea records
+* implement loop to extract each record type and pass to a decoder
 
 
 2Do
 ===
+* extract navigation from position datagrams (category 17)
+* extract heading from gyro datagrams (category 36)
 * figure out the ID on each record so we know which sensor it is from
-* extract navigation
-* implement loop to extract each record type and pass to a decoder
-* convert EM records to point cloud
 
 ```
     # opening the file reads the header
