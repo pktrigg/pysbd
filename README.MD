@@ -1,4 +1,4 @@
-pysdb
+pysbd
 =====
 * created:       December 2023
 * by:            paul.kennedy@guardiangeomatics.com

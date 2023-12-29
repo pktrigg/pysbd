@@ -1,4 +1,4 @@
-#name:			pysdb
+#name:			pysbd
 #created:		May 2023
 #by:			paul.kennedy@guardiangeomatics.com
 #description:	python module to read an EIVA binary SDB file
@@ -22,7 +22,7 @@ from pynmeagps import NMEAReader
 
 ###############################################################################
 def main():
-	filename = "C:/ggtools/pysdb/J129N032.SBD"
+	filename = "C:/ggtools/pysbd/J129N032.SBD"
 	#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  The reader will read the initial header so we can get to grips with the file contents with ease.
 	print ( "processing file:", filename)
 	reader = SBDReader(filename)
@@ -62,10 +62,19 @@ def update_progress(job_title, progress):
 ####################################################################################################################
 ###############################################################################
 class SENSOR:
-	def __init__(self, id=0, name=""):
+	def __init__(self, id=0, name="", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0, offsetheave = 0):
 
 		self.id = id
 		self.name = name
+		self.port = port
+		self.offsetx = offsetx
+		self.offsety = offsety
+		self.offsetz = offsetz
+		self.offsetheading = offsetheading
+		self.offsetroll = offsetroll
+		self.offsetpitch = offsetpitch
+		self.offsetheave = offsetheave
+
 ###############################################################################
 class SBDFILEHDR:
 	def __init__(self, fileptr):
@@ -94,24 +103,22 @@ class SBDFILEHDR:
 
 		#geodesy is at offset 366 (80 bytes)
 		fileptr.seek(366, 0)
-		msg_fmt = '=80s'
+		msg_fmt = '80s'
 		msg_len = struct.calcsize(msg_fmt)
 		msg_unpack = struct.Struct(msg_fmt).unpack_from
-
 		data = fileptr.read(msg_len)
 		s = msg_unpack(data)
 		self.ellipsiod = s[0].decode('utf-8').rstrip('\x00')
+		print (self.ellipsiod)
 
 		#geodesy UTM is at 446
 		fileptr.seek(446, 0)
-		msg_fmt = '=80s'
+		msg_fmt = '80s'
 		msg_len = struct.calcsize(msg_fmt)
 		msg_unpack = struct.Struct(msg_fmt).unpack_from
-
 		data = fileptr.read(msg_len)
 		s = msg_unpack(data)
 		self.projection = s[0].decode('utf-8').rstrip('\x00')
-		print (self.projection)
 		print (self.projection)
 		
 		#2do figure out how manyy sensor defintions there are...
@@ -124,33 +131,69 @@ class SBDFILEHDR:
 		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
 		fileptr.seek(1068, 0)
 		for idx in range(0,self.sensorcount + 1):
-			msg_fmt = '=32s'
-			msg_len = struct.calcsize(msg_fmt)
-			msg_unpack = struct.Struct(msg_fmt).unpack_from
-			data = fileptr.read(msg_len)
-			s = msg_unpack(data)
-			sensorname = s[0].decode('utf-8').rstrip('\x00')
+			msg_fmt 		= '32s'
+			msg_len 		= struct.calcsize(msg_fmt)
+			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+			data 			= fileptr.read(msg_len)
+			s 				= msg_unpack(data)
+			sensorname 		= s[0].decode('utf-8').rstrip('\x00')
 
-			#we do not know what these contain yet so skip them
-			msg_fmt = '=l110h'
-			msg_len = struct.calcsize(msg_fmt)
-			msg_unpack = struct.Struct(msg_fmt).unpack_from
-			data = fileptr.read(msg_len)
-			s = msg_unpack(data)
-			id = s[0]
-			baud = s[4]
-			parity = s[5]
-			bits = s[6]
-			stopbits = s[7]
+			#we do not know what these next 224 bytes contain yet so skip them
+			# msg_fmt = '=112h'
+			# msg_len = struct.calcsize(msg_fmt)
+			# msg_unpack = struct.Struct(msg_fmt).unpack_from
+			# data = fileptr.read(msg_len)
+			# s = msg_unpack(data)
+			# id 			= s[0]
+			# disable 	= s[1]
+			# port 		= s[2]
+			# baud 		= s[4]
+			# parity 		= s[5]
+			# databits 	= s[6]
+			# stopbits 	= s[7]
+			# unknown 	= s[8] #reports number 78.  no idea what it is.  
 
-			sensor = SENSOR(id, sensorname)
-			# self.fileSize = fileptr.seek(224, 1)
+			# msg_fmt 		= '=4H 108H'
+			msg_fmt 		= '<8H 52f'
+			msg_len 		= struct.calcsize(msg_fmt)
+			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+			data 			= fileptr.read(msg_len)
+			s 				= msg_unpack(data)
+			id 				= s[0]
+			disable 		= s[1]
+			port 			= s[2]
+			baud 			= s[4]
+			parity 			= s[5]
+			databits 		= s[6]
+			stopbits 		= s[7]
+			latency			= s[9]
+			offsetx			= s[10]
+			offsety			= s[11]
+			offsetz			= s[12]
+			offsetheading	= s[13]
+			offsetroll		= s[14]
+			offsetpitch		= s[15]
+			offsetheave		= s[16]
+			gravity			= s[18]
+
+			depthc_o	= s[13]
+
+			#up to id 7 seems to be good
+			unknown 	= s[8] #reports number 78.  no idea what it is.  
+
+			#expect to see Dxyz,rph offsets in this structure as doubles or floats
+
+			sensor = SENSOR(id, sensorname, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
+			# fileptr.seek(224, 1)
 			print (id, sensor.name)
 
 			self.sensors[sensorname] = sensor
 
-		#not sure why we need this....
-		data = fileptr.read(4)
+		#not sure why we need to rewind by 4 bytes....
+		fileptr.seek(fileptr.tell()-4,0)
+			
+		# data = fileptr.read(4)
+		# print(data)
 
 	#########################################################################################
 	def __str__(self):
@@ -159,8 +202,8 @@ class SBDFILEHDR:
 #########################################################################################
 class SBDReader:
 	'''now lets try to read the data packet header which is 32 bytes...'''
-	hdr_fmt = '=16h' # we know this works....
-	hdr_fmt = '=3l4f2h'
+	# hdr_fmt = '=16h' # we know this works....
+	hdr_fmt = '<4h 2L 2H'
 	hdr_len = struct.calcsize(hdr_fmt)
 	hdr_unpack = struct.Struct(hdr_fmt).unpack_from
 
@@ -217,37 +260,37 @@ class SBDReader:
 	# 	# print("Get navigation Range Duration %.3fs" % (time.time() - start_time)) # print the processing time.
 	# 	return (navigation)
 
-	#########################################################################################
-	def computeSpeedFromPositions(self, navData):
-		if (navData[0].sensorX <= 180) & (navData[0].sensorY <= 90): #data is in geographicals
-			for r in range(len(navData) - 1):
-				rng, bearing12, bearing21 = geodetic.calculateRangeBearingFromGeographicals(navData[r].sensorX, navData[r].sensorY, navData[r+1].sensorX, navData[r+1].sensorY)
-				# now we have the range, comput the speed in metres/second. where speed = distance/time
-				navData[r].sensorSpeed = rng / (navData[r+1].dateTime.timestamp() - navData[r].dateTime.timestamp())
-		else:
-			for r in range(len(navData) - 1):
-				rng, bearing12, bearing21 = geodetic.calculateRangeBearingFromGridPosition(navData[r].sensorX, navData[r].sensorY, navData[r+1].sensorX, navData[r+1].sensorY)
-				# now we have the range, comput the speed in metres/second. where speed = distance/time
-				navData[r].sensorSpeed = rng / (navData[r+1].dateTime.timestamp() - navData[r].dateTime.timestamp())
+	# #########################################################################################
+	# def computeSpeedFromPositions(self, navData):
+	# 	if (navData[0].sensorX <= 180) & (navData[0].sensorY <= 90): #data is in geographicals
+	# 		for r in range(len(navData) - 1):
+	# 			rng, bearing12, bearing21 = geodetic.calculateRangeBearingFromGeographicals(navData[r].sensorX, navData[r].sensorY, navData[r+1].sensorX, navData[r+1].sensorY)
+	# 			# now we have the range, comput the speed in metres/second. where speed = distance/time
+	# 			navData[r].sensorSpeed = rng / (navData[r+1].dateTime.timestamp() - navData[r].dateTime.timestamp())
+	# 	else:
+	# 		for r in range(len(navData) - 1):
+	# 			rng, bearing12, bearing21 = geodetic.calculateRangeBearingFromGridPosition(navData[r].sensorX, navData[r].sensorY, navData[r+1].sensorX, navData[r+1].sensorY)
+	# 			# now we have the range, comput the speed in metres/second. where speed = distance/time
+	# 			navData[r].sensorSpeed = rng / (navData[r+1].dateTime.timestamp() - navData[r].dateTime.timestamp())
 
-		# now smooth the sensorSpeed
-		speeds = [o.sensorSpeed for o in navData]
-		npspeeds=np.array(speeds)
+	# 	# now smooth the sensorSpeed
+	# 	speeds = [o.sensorSpeed for o in navData]
+	# 	npspeeds=np.array(speeds)
 
-		smoothSpeed = geodetic.medfilt(npspeeds, 5)
-		meanSpeed = float(np.mean(smoothSpeed))
+	# 	smoothSpeed = geodetic.medfilt(npspeeds, 5)
+	# 	meanSpeed = float(np.mean(smoothSpeed))
 
-		for r in range(len(navData) - 1):
-			navData[r].sensorSpeed = float (smoothSpeed[r])
+	# 	for r in range(len(navData) - 1):
+	# 		navData[r].sensorSpeed = float (smoothSpeed[r])
 
-		return meanSpeed, navData
+	# 	return meanSpeed, navData
 
 	#########################################################################################
 	def readDatagram(self):
 		ping = None
 		# remember the start position, so we can easily comput the position of the next packet
 		currentPacketPosition = self.fileptr.tell()
-		# print("currentpos %d" % (currentPacketPosition))
+		print("reading datagram from currentpos %d" % (currentPacketPosition))
 
 		# Sounder ID = 33
 		# Disk Loc: 0x1228 offset 4648
@@ -274,30 +317,36 @@ class SBDReader:
 		data = self.fileptr.read(self.hdr_len)
 		s = self.hdr_unpack(data)
 
-		# msgid 			= s[0]
-		msgunixtimeseconds 			= s[0]
-		msgunixtimemicroseconds 			= s[1]
-		msgtimestamp = msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
-		print (msgtimestamp)
-		msglen 						= s[2] - 20 #we know this works...!!!!
+		msgid 						= s[0]
+		msgunixtimeseconds 			= s[4]
+		msgunixtimemicroseconds 	= s[5]
+		msgtimestamp 				= msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
+		msglen 						= s[6] #we know this works...!!!!
 
-		# msglen 			= s[4] - 20 #we know this works...!!!!
-		msgsubpackets 	= s[2]
 
-		# print (self.fileptr.tell())
+		# print ("pkpk diff %d" % (s[6] - s[16]))
+
+
+		print ("timestamp %.5f XXXXXmsglen %d" % (msgtimestamp, s[6]))
+
 		# Disk Loc: 0x1228 offset 4648 AS PER CARIS, WHICH MEANS CARIS OFFSET + 40 BYTE HEADER
-		msg_fmt = '=' + str(msglen) + 's' + '4h'
+		# msg_fmt = '=' + str(msglen) + 's' #+ 'L'
+		if msglen == 102:
+			msg_fmt = '< 8H 2H' + str(msglen-20) + 's' #+ 'L'
+		else:
+			msg_fmt = '< 8H' + str(msglen-20) + 's' #+ 'L'
+
 		msg_len = struct.calcsize(msg_fmt)
 		msg_unpack = struct.Struct(msg_fmt).unpack_from
 
 		# print ("Reading %d bytes" % (msg_len))
 		data = self.fileptr.read(msg_len)
 		s1 = msg_unpack(data)
-		msg=s1[0].decode('utf-8').rstrip('\x00')
-		# print(s[0])
+		# msg=s1[0].decode('utf-8').rstrip('\x00')
+		print(s1[0])
 
-		msg = NMEAReader.parse(msg,VALCKSUM=0,)
-		print(msg)
+		# msg = NMEAReader.parse(msg,VALCKSUM=0,)
+		# print(msg)
 
 		return ping
 
