@@ -30,7 +30,6 @@ def main():
 
 	while reader.moreData() > reader.hdr_len:
 		pingHdr = reader.readDatagram()
-	reader.rewind()
 
 	# navigation = reader.loadNavigation()
 	# for n in navigation:
@@ -38,42 +37,22 @@ def main():
 	print("Complete reading SDB file :-)")
 	reader.close()
 
-###############################################################################
-# TIME HELPER FUNCTIONS
-###############################################################################
-def to_timestamp(dateObject):
-	return (dateObject - datetime(1970, 1, 1)).total_seconds()
-
-def from_timestamp(unixtime):
-	return datetime.utcfromtimestamp(unixtime)
-
-def dateToSecondsSinceMidnight(dateObject):
-	return (dateObject - dateObject.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-
-###############################################################################
-def update_progress(job_title, progress):
-	length = 20 # modify this to change the length
-	block = int(round(length*progress))
-	msg = "\r{0}: [{1}] {2}%".format(job_title, "#"*block + "-"*(length-block), round(progress*100, 2))
-	if progress >= 1: msg += " DONE\r\n"
-	sys.stdout.write(msg)
-	sys.stdout.flush()
-
 ####################################################################################################################
 ###############################################################################
 class SENSOR:
-	def __init__(self, id=0, name="", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0, offsetheave = 0):
+	def __init__(self, id=0, porttype=0, name="", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0, offsetheave = 0):
 
-		self.id = id
-		self.name = name
-		self.port = port
-		self.offsetx = offsetx
-		self.offsety = offsety
-		self.offsetz = offsetz
-		self.offsetheading = offsetheading
-		self.offsetroll = offsetroll
-		self.offsetpitch = offsetpitch
-		self.offsetheave = offsetheave
+		self.id 			= id
+		self.name 			= name
+		self.porttype 		= porttype
+		self.port 			= port
+		self.offsetx 		= offsetx
+		self.offsety 		= offsety
+		self.offsetz 		= offsetz
+		self.offsetheading 	= offsetheading
+		self.offsetroll 	= offsetroll
+		self.offsetpitch 	= offsetpitch
+		self.offsetheave 	= offsetheave
 
 ###############################################################################
 class SBDFILEHDR:
@@ -153,37 +132,140 @@ class SBDFILEHDR:
 			# stopbits 	= s[7]
 			# unknown 	= s[8] #reports number 78.  no idea what it is.  
 
-			# msg_fmt 		= '=4H 108H'
-			msg_fmt 		= '<8H 52f'
+			msg_fmt 		= '<H'
 			msg_len 		= struct.calcsize(msg_fmt)
 			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 			data 			= fileptr.read(msg_len)
 			s 				= msg_unpack(data)
-			id 				= s[0]
-			disable 		= s[1]
-			port 			= s[2]
-			baud 			= s[4]
-			parity 			= s[5]
-			databits 		= s[6]
-			stopbits 		= s[7]
-			latency			= s[9]
-			offsetx			= s[10]
-			offsety			= s[11]
-			offsetz			= s[12]
-			offsetheading	= s[13]
-			offsetroll		= s[14]
-			offsetpitch		= s[15]
-			offsetheave		= s[16]
-			gravity			= s[18]
+			porttype		= s[0]
+			
+			#now we need to read the rest of the structure based on the port type		
+			if porttype == 1: # serial ports...
+				#looks like we need 14 bytes for a com port definition
+				msg_fmt 		= '<7H 11f 82H'
+				msg_len 		= struct.calcsize(msg_fmt)
+				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+				data 			= fileptr.read(msg_len)
+				s 				= msg_unpack(data)
+				disabled 		= s[0]
+				port 			= s[1]
+				baud 			= s[3]
+				parity 			= s[4]
+				databits 		= s[5]
+				stopbits 		= s[6]
+				#seems ok until here.
+				latency			= s[8]
+				offsetx			= s[10]
+				offsety			= s[11]
+				offsetz			= s[12]
+				offsetheading	= s[13]
+				depthc_o	= s[13]
+				offsetroll		= s[14]
+				offsetpitch		= s[15]
+				offsetheave		= s[16]
+				gravity			= s[18]
 
-			depthc_o	= s[13]
+				unknown1		= s[96]
+				unknown2		= s[97]
+
+			elif porttype == 2: # UDP ports...
+				msg_fmt 		= '<2H 6B 11f 84H'
+				#looks like we need 14 bytes for a ethernet port definition
+				msg_len 		= struct.calcsize(msg_fmt)
+				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+				data 			= fileptr.read(msg_len)
+				s 				= msg_unpack(data)
+				disabled		= s[0]
+				portnumber 		= s[1]
+				ip1 			= s[4]
+				ip2 			= s[5]
+				ip3 			= s[6]
+				ip4 			= s[7]
+
+				stopbits 		= s[7]
+				latency			= s[9]
+				offsetx			= s[10]
+				offsety			= s[11]
+				offsetz			= s[12]
+				offsetheading	= s[13]
+				offsetroll		= s[14]
+				offsetpitch		= s[15]
+				offsetheave		= s[16]
+				gravity			= s[18]
+				
+				depthc_o	= s[13]
+
+				unknown1		= s[99]
+				unknown2		= s[100]
+
+			elif porttype == 4: # ATTU ports...
+				msg_fmt 		= '<2H 6B 11f 84H'
+				#looks like we need 14 bytes for a ethernet port definition
+				msg_len 		= struct.calcsize(msg_fmt)
+				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+				data 			= fileptr.read(msg_len)
+				s 				= msg_unpack(data)
+				disabled		= s[0]
+				portnumber 		= s[1]
+				ip1 			= s[4]
+				ip2 			= s[5]
+				ip3 			= s[6]
+				ip4 			= s[7]
+
+				stopbits 		= s[7]
+				latency			= s[9]
+				offsetx			= s[10]
+				offsety			= s[11]
+				offsetz			= s[12]
+				offsetheading	= s[13]
+				offsetroll		= s[14]
+				offsetpitch		= s[15]
+				offsetheave		= s[16]
+				gravity			= s[18]
+				
+				depthc_o	= s[13]
+
+				unknown1		= s[99]
+				unknown2		= s[100]
+
+			else: # anything else
+				msg_fmt 		= '<2H 6B 11f 84H'
+				#looks like we need 14 bytes for a ethernet port definition
+				msg_len 		= struct.calcsize(msg_fmt)
+				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+				data 			= fileptr.read(msg_len)
+				s 				= msg_unpack(data)
+				disabled		= s[0]
+				portnumber 		= s[1]
+				ip1 			= s[4]
+				ip2 			= s[5]
+				ip3 			= s[6]
+				ip4 			= s[7]
+
+				stopbits 		= s[7]
+				latency			= s[9]
+				offsetx			= s[10]
+				offsety			= s[11]
+				offsetz			= s[12]
+				offsetheading	= s[13]
+				offsetroll		= s[14]
+				offsetpitch		= s[15]
+				offsetheave		= s[16]
+				gravity			= s[18]
+				
+				depthc_o	= s[13]
+
+				unknown1		= s[99]
+				unknown2		= s[100]
+
+
 
 			#up to id 7 seems to be good
 			unknown 	= s[8] #reports number 78.  no idea what it is.  
 
 			#expect to see Dxyz,rph offsets in this structure as doubles or floats
-
-			sensor = SENSOR(id, sensorname, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
+			
+			sensor = SENSOR(id, porttype, sensorname, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
 			# fileptr.seek(224, 1)
 			print (id, sensor.name)
 
@@ -204,6 +286,7 @@ class SBDReader:
 	'''now lets try to read the data packet header which is 32 bytes...'''
 	# hdr_fmt = '=16h' # we know this works....
 	hdr_fmt = '<4h 2L 2H'
+	hdr_fmt = '<2L 2L L'
 	hdr_len = struct.calcsize(hdr_fmt)
 	hdr_unpack = struct.Struct(hdr_fmt).unpack_from
 
@@ -290,7 +373,7 @@ class SBDReader:
 		ping = None
 		# remember the start position, so we can easily comput the position of the next packet
 		currentPacketPosition = self.fileptr.tell()
-		print("reading datagram from currentpos %d" % (currentPacketPosition))
+		# print("reading datagram from currentpos %d" % (currentPacketPosition))
 
 		# Sounder ID = 33
 		# Disk Loc: 0x1228 offset 4648
@@ -318,23 +401,27 @@ class SBDReader:
 		s = self.hdr_unpack(data)
 
 		msgid 						= s[0]
-		msgunixtimeseconds 			= s[4]
-		msgunixtimemicroseconds 	= s[5]
-		msgtimestamp 				= msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
-		msglen 						= s[6] #we know this works...!!!!
+		# msgunixtimeseconds 			= s[4]
+		# msgunixtimemicroseconds 	= s[5]
+		# msgtimestamp 				= msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
+		# msglen 						= s[6] #we know this works...!!!!
+		# print ("timestamp %.5f XXXXXmsglen %d" % (msgtimestamp, s[6]))
+		
 
+		#try long instead of ints
+		msglen 						= s[4] #we know this works...!!!!
 
-		# print ("pkpk diff %d" % (s[6] - s[16]))
-
-
-		print ("timestamp %.5f XXXXXmsglen %d" % (msgtimestamp, s[6]))
 
 		# Disk Loc: 0x1228 offset 4648 AS PER CARIS, WHICH MEANS CARIS OFFSET + 40 BYTE HEADER
 		# msg_fmt = '=' + str(msglen) + 's' #+ 'L'
 		if msglen == 102:
-			msg_fmt = '< 8H 2H' + str(msglen-20) + 's' #+ 'L'
+			print("AA")
+			msg_fmt = '< 20s' + str(msglen-20) + 's'
+		elif msglen == 98:
+			print("BB")
+			msg_fmt = '< 16s' + str(msglen-16) + 's' #+ '4s'
 		else:
-			msg_fmt = '< 8H' + str(msglen-20) + 's' #+ 'L'
+			msg_fmt = '< 20s' + str(msglen-20) + 's'
 
 		msg_len = struct.calcsize(msg_fmt)
 		msg_unpack = struct.Struct(msg_fmt).unpack_from
@@ -343,12 +430,33 @@ class SBDReader:
 		data = self.fileptr.read(msg_len)
 		s1 = msg_unpack(data)
 		# msg=s1[0].decode('utf-8').rstrip('\x00')
-		print(s1[0])
+		print("msgid: %d data: %s" %(msgid, s1[1]))
 
 		# msg = NMEAReader.parse(msg,VALCKSUM=0,)
 		# print(msg)
 
 		return ping
+
+###############################################################################
+# TIME HELPER FUNCTIONS
+###############################################################################
+def to_timestamp(dateObject):
+	return (dateObject - datetime(1970, 1, 1)).total_seconds()
+
+def from_timestamp(unixtime):
+	return datetime.utcfromtimestamp(unixtime)
+
+def dateToSecondsSinceMidnight(dateObject):
+	return (dateObject - dateObject.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
+
+###############################################################################
+def update_progress(job_title, progress):
+	length = 20 # modify this to change the length
+	block = int(round(length*progress))
+	msg = "\r{0}: [{1}] {2}%".format(job_title, "#"*block + "-"*(length-block), round(progress*100, 2))
+	if progress >= 1: msg += " DONE\r\n"
+	sys.stdout.write(msg)
+	sys.stdout.flush()
 
 #########################################################################################
 #########################################################################################

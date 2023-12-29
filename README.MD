@@ -24,12 +24,12 @@ Done
 * implement loop to extract each record type and pass to a decoder
 * convert EM records to point cloud
 
-'''
-    # opening the file reads the header and then the channelinfo automatically
-    r = SDBReader(<filename>)
+```
+    # opening the file reads the header
+    r = SBDReader(<filename>)
         # we can then loop through all packets, 
         while r.moreData():
             record = r.readDatagram()
     # close the File 
     r.close()
-'''
+```
