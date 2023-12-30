@@ -32,8 +32,9 @@ from pynmeagps import NMEAReader
 ###############################################################################
 def main():
 	filename = "C:/ggtools/pysbd/J129N032.SBD"
-	filename = "C:/ggtools/pysbd/J355N005.SBD"
+	# filename = "C:/ggtools/pysbd/J355N005.SBD"
 	# filename = "C:/ggtools/pysbd/J355N001.SBD"
+	filename = "C:/ggtools/pysbd/J129N032_stripped.SBD"
 
 	#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  The reader will read the initial header so we can get to grips with the file contents with ease.
 	print ( "processing file:", filename)
@@ -136,11 +137,7 @@ class SBDFILEHDR:
 		
 		#2do figure out how manyy sensor defintions there are...
 		#each sensor definition takes 256 bytes.  
-		# nmea ZDA at offset 1068
-		# name is at offset 1323
-		# name Sprint at offset 1579
-		# looks like the sensor definition starts at byte 1060 with an ID and then a type
-		#try it as a loop
+		# looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
 		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
 		fileptr.seek(1060, 0)
 		for idx in range(0,self.sensorcount + 1):
@@ -169,7 +166,6 @@ class SBDFILEHDR:
 				databits 		= s[5]
 				stopbits 		= s[6]
 				ipaddress = str("0.0.0.0")
-
 				#seems ok until here.
 				latency			= s[8]
 				offsetx			= s[10]
@@ -196,7 +192,6 @@ class SBDFILEHDR:
 				ip3 			= s[6]
 				ip4 			= s[7]
 				ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-
 				stopbits 		= s[7]
 				latency			= s[9]
 				offsetx			= s[10]
@@ -207,7 +202,6 @@ class SBDFILEHDR:
 				offsetpitch		= s[15]
 				offsetheave		= s[16]
 				gravity			= s[18]
-				
 				depthc_o	= s[13]
 
 			elif porttype == 4: # ATTU ports...
@@ -234,7 +228,6 @@ class SBDFILEHDR:
 				offsetpitch		= s[15]
 				offsetheave		= s[16]
 				gravity			= s[18]
-				
 				depthc_o	= s[13]
 
 			else: # anything else
@@ -261,7 +254,6 @@ class SBDFILEHDR:
 				offsetpitch		= s[15]
 				offsetheave		= s[16]
 				gravity			= s[18]
-				
 				depthc_o	= s[13]
 
 			sensor = SENSOR(id, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
@@ -359,29 +351,7 @@ class SBDReader:
 		ping = None
 		# remember the start position, so we can easily comput the position of the next packet
 		currentPacketPosition = self.fileptr.tell()
-		# print("reading datagram from currentpos %d" % (currentPacketPosition))
-
-		# Sounder ID = 33
-		# Disk Loc: 0x1228 offset 4648
-		# Datagram type: POSITION (9.0)       Time: 1683658757.900 (2023/05/09 18:59:17.900),  Size:    102,  # subpackets:    0
-		# Seqence Number:    0  Easting: 286971.946  Northing: 6748230.922
-
-		# Disk Loc: 0x12A2 offset 4770
-		# Datagram type (Other 9.0) : 65535    Time: 1683658757.901 (2023/05/09 18:59:17.901),  Size:     98,  # subpackets:    0
-
-		# Disk Loc: 0x1318 offset 4888
-		# Datagram type: POSITION (9.0)       Time: 1683658757.900 (2023/05/09 18:59:17.900),  Size:    102,  # subpackets:    0
-		# Seqence Number:    0  Easting: 286971.946  Northing: 6748230.922
-
-
-		# Disk Loc: 0x1392 offset 5010
-		# Datagram type: GYRO (9.0)           Time: 1683658758.107 (2023/05/09 18:59:18.107),  Size:     30,  # subpackets:    0
-		# Seqence Number:    0  Gyro:  37.950
-
-		#not sure wht we need these....
-		# data = fileptr.read(4)
-
-		# print (self.fileptr.tell())
+		print("reading datagram from currentpos %d %s" % (currentPacketPosition, hex(currentPacketPosition)))
 
 		data = self.fileptr.read(self.hdr_len)
 		s = self.hdr_unpack(data)
