@@ -44,10 +44,21 @@ def main():
 	start_time = time.time() # time  the process
 
 	while reader.moreData():
-		sensortype, msgtimestamp, msglen, data = reader.readdatagram()
-		if sensortype is None:
+		category, decoded = reader.readdatagram()
+		if category == reader.MOTION:
+			sensorid, msgtimestamp, msglen, gyro, gyrocorr, gyromc, data = decoded
+		
+		elif category == reader.POSITION: # 8
+			sensorid, msgtimestamp, msglen, easting, northing, data = decoded
+
+		elif category == reader.BATHY:  # 4
+			sensorid, msgtimestamp, msglen, depth, data = decoded
+		else:
+			sensorid, msgtimestamp, msglen, data = decoded
+
+		if category is None:
 			continue
-		print(from_timestamp(msgtimestamp), sensortype, msglen, data)
+		print(from_timestamp(msgtimestamp), category, msglen, data)
 		# if sensortype == 8: # NMEA INGGA Position
 			# nmeastring=data.decode('utf-8').rstrip('\x00')
 			# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
@@ -88,7 +99,7 @@ class SENSOR:
 class SBDFILEHDR:
 	def __init__(self, fileptr):
 
-		self.sensors = {}
+		self.sensors = []
 
 		# File Version: 9.0
 		#header is 60 bytes...
@@ -139,6 +150,24 @@ class SBDFILEHDR:
 		#each sensor definition takes 256 bytes.  
 		# looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
 		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
+
+		# count		type,	un,	cat,	disabl,	un,un,un,un,name
+		# 0 	0	(3,  	0, 	0,  	0, 		0, 0, 0, 0, b'NMEA ZDA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 1)
+		# 1 	1	(26, 	0, 	2,  	0, 		0, 0, 0, 0, b'Sprint EM3000\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# x  	2	(10, 	0, 	3,  	1, 		0, 0, 0, 0, b'Sprint EM3000RPH\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# 2 	3	(16, 	0,	4,  	0, 		0, 0, 0, 0, b'SprintINGGA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# 3 	4	(13, 	0, 	4,  	0, 		0, 0, 0, 0, b'Mini IPS\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 4)
+		# 4 	5	(35, 	0, 	4,  	0, 		0, 0, 0, 0, b'VaisalaBaromet\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 4)
+		# 5 	6	(6,  	0, 	5,  	0, 		0, 0, 0, 0, b'MiniSVS\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 4)
+		# 6 	7	(6,  	0, 	8,  	0, 		0, 0, 0, 0, b'SprintINGGA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# 7 	8	(9,  	0, 	8,  	0, 		0, 0, 0, 0, b'ROV USBL\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# x  	9	(9,  	0, 	8,  	1, 		0, 0, 0, 0, b'Stbd wheel\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 2)
+		# x 	10	(33, 	0, 	9,  	1, 		0, 0, 0, 0, b'H1_R2Sonic 2000 series Dual \x00\x00\x00\x00', 2)
+		# x 	11	(33, 	0, 	9,  	1, 		0, 0, 0, 0, b'H2_R2Sonic 2000 series Dual\x00\x00\x00\x00\x00', 2)
+		# x 	12	(7,  	0, 	11, 	1, 		106, 5, 0, 0, b'OrionCableTracker\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 4)
+		# x 	13	(2,  	0, 	11, 	1, 		0, 0, 0, 0, b'TSS 340/440/440mm\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 0)
+
+
 		fileptr.seek(1060, 0)
 		for idx in range(0,self.sensorcount + 1):
 			msg_fmt 		= '8B 32s H'
@@ -146,9 +175,15 @@ class SBDFILEHDR:
 			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 			data 			= fileptr.read(msg_len)
 			s 				= msg_unpack(data)
+			sensortype		= s[0] # as per instruments.xml file in naviscan folder
+			unknown1		= s[1]
+			sensorcategory	= s[2]
+			disabled		= s[3]	
+			unknown3		= s[4]	
+			unknown4		= s[5]	
+			unknown5		= s[6]	
+			unknown6		= s[7]	
 			sensorname 		= s[8].decode('utf-8').rstrip('\x00')
-			sensorcategory	= s[0]
-			sensortype		= s[1]
 			porttype		= s[9]
 
 			#now we need to read the rest of the structure based on the port type		
@@ -256,14 +291,18 @@ class SBDFILEHDR:
 				gravity			= s[18]
 				depthc_o	= s[13]
 
-			sensor = SENSOR(id, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
-			print (id, sensor.name)
+			#skip the disabled sensors
+			if disabled != 0:
+				continue
 
-			self.sensors[sensorname] = sensor
+			sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
+			print (idx, sensor.name)
+
+			self.sensors.append(sensor)
 
 		#print the sensor definitions
 		for sensor in self.sensors:
-			print (self.sensors[sensor])
+			print (sensor)
 			
 		#not sure why we need to advance by 4 bytes....
 		# msg_fmt 		= '<2H'
@@ -288,8 +327,24 @@ class SBDReader:
 	hdr_fmt = '<4h 2L 2H'
 	hdr_fmt = '<2L 2L L'
 	hdr_fmt = '<4H 2L L'
+	hdr_fmt = '<2L 2L L'
 	hdr_len = struct.calcsize(hdr_fmt)
 	hdr_unpack = struct.Struct(hdr_fmt).unpack_from
+
+	#SENSOR CATEGORY
+	GNSSTIME 			= 0
+	RUNLINECONTROL 		= 1
+	GYRO 				= 2
+	MOTION				= 3
+	BATHY		 		= 4
+	AUXILIARY		 	= 5
+	RAWDATA		 		= 6
+	DOPPLER		 		= 7
+	POSITION 			= 8
+	ECHOSOUNDER			= 9
+	SIDESCAN			= 10 #0x00a
+	PIPETRACKER			= 11 #0x00b
+	#thats all of them from the insutruments.xml file in naviscan
 
 	#########################################################################################
 	def __init__(self, SDBfileName):
@@ -356,32 +411,85 @@ class SBDReader:
 		data = self.fileptr.read(self.hdr_len)
 		s = self.hdr_unpack(data)
 
-		sensortype 					= s[0]
-		msgunixtimeseconds 			= s[4]
-		msgunixtimemicroseconds 	= s[5]
+		sensorid 					= s[0]
+		unknown1 					= s[1]	
+		# unknown2 					= s[2]	
+		# unknown3 					= s[3]
+		msgunixtimeseconds 			= s[2]
+		msgunixtimemicroseconds 	= s[3]
 		msgtimestamp 				= msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
-		msglen 						= s[6] #we know this works...!!!!
+		msglen 						= s[4] #we know this works...!!!!
 
 		if msglen == 0:
 			return None, None, None, None
 
-		if msglen == 102:
-			msg_fmt = '< 20s' + str(msglen-20) + 's'
-		elif msglen == 98:
-			#god knows why we sometimes see this type of message.  makes no sense yet
-			msg_fmt = '< 16s' + str(msglen-16) + 's' #+ '4s'
+		category = self.SDBFileHdr.sensors[sensorid].sensorcategory
+		if category == self.MOTION:
+			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' # easting, northing, packetsize, 0, data
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			gyro 		= s1[0]
+			pitch 		= s1[1]
+			roll 		= s1[2] 
+			packetsize 	= s1[3]
+			data 		= s1[4]
+			print("sensorID: %d data: %s" %(sensorid, data))
+			return category, [sensorid, msgtimestamp, msglen, gyro, pitch, roll, data]
+		
+		elif category == self.POSITION:
+			msg_fmt = '< 2d 2H' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data pkpk the 3rd word could be a long int??
+			# for the first 20 bytes, 16-20 are unsigned shorts.  16-18 are the msg size, 19-20 are 0
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			easting 	= s1[0]
+			northing 	= s1[1]
+			packetsize 	= s1[2]
+			data 		= s1[4]
+			print("sensorID: %d data: %s" %(sensorid, data))
+			return category, [sensorid, msgtimestamp, msglen, easting, northing, data]
+		
+		elif category == self.BATHY:
+			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' # easting, northing, packetsize, 0, data
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			depth 		= s1[0]
+			unknown 	= s1[1]
+			unknown 	= s1[2]
+			packetsize 	= s1[3]
+			data 		= s1[4]
+			print("sensorID: %d data: %s" %(sensorid, data))
+			return category, [sensorid, msgtimestamp, msglen, depth, data]
 		else:
 			msg_fmt = '< 20s' + str(msglen-20) + 's'
+			msg_len = struct.calcsize(msg_fmt)
+			msg_unpack = struct.Struct(msg_fmt).unpack_from
+			data = self.fileptr.read(msg_len)
+			s1 = msg_unpack(data)
 
-		msg_len = struct.calcsize(msg_fmt)
-		msg_unpack = struct.Struct(msg_fmt).unpack_from
+		# if msglen == 102:
+		# 	# msg_fmt = '< 20s' + str(msglen-20) + 's'
+		# 	# msg_fmt = '< 20s' + str(msglen-20) + 's'
+		# 	# msg_fmt = '< 10h' + str(msglen-20) + 's' # nope
+		# 	# msg_fmt = '< 10H' + str(msglen-20) + 's' #nope
+		# 	# msg_fmt = '< 5L' + str(msglen-20) + 's' #nope
+		# 	msg_fmt = '< 2d 2H' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data
+		# 	# for the first 20 bytes, 16-20 are unsigned shorts.  16-18 are the msg size, 19-20 are 0
+		# elif msglen == 98:
+		# 	#god knows why we sometimes see this type of message.  makes no sense yet
+		# 	# msg_fmt = '< 16s' + str(msglen-16) + 's' #+ '4s'
+		# 	# msg_fmt = '< 2d 2H' + str(msglen-16) + 's' # easting, northing, packetsize, 0, data
+		# 	msg_fmt = '< 3f 2H' + str(msglen-16) + 's' # easting, northing, packetsize, 0, data
+		# else:
+		# 	msg_fmt = '< 20s' + str(msglen-20) + 's'
 
-		data = self.fileptr.read(msg_len)
-		s1 = msg_unpack(data)
 		# msg=s1[0].decode('utf-8').rstrip('\x00')
 		# print("sensortype: %d data: %s" %(sensortype, s1[1]))
-
-		return sensortype, msgtimestamp, msglen, s1[1]
 
 ###############################################################################
 # TIME HELPER FUNCTIONS
