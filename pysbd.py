@@ -28,14 +28,15 @@ import fnmatch
 import numpy as np
 import geodetic
 from pynmeagps import NMEAReader
+import r2sonicdecode
+import refraction
 
 ###############################################################################
 def main():
 	# these files have been used for testing...
 	filename = "C:/ggtools/pysbd/J129N032.SBD"
-	# filename = "C:/ggtools/pysbd/J355N005.SBD"
-	# filename = "C:/ggtools/pysbd/J355N001.SBD"
-	# filename = "C:/ggtools/pysbd/J129N032_stripped.SBD"
+	filename = "C:/ggtools/pysbd/J355N005.SBD"
+	filename = "C:/ggtools/pysbd/J355N001.SBD"
 
 	#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  The reader will read the initial header so we can get to grips with the file contents with ease.
 	print ( "Processing file:", filename)
@@ -47,24 +48,36 @@ def main():
 	while reader.moreData():
 		category, decoded = reader.readdatagram()
 		if category == reader.GYRO:
-			sensorid, msgtimestamp, gyro, gyrocorr, rawdata = decoded
-			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), gyro))
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 
-		if category == reader.MOTION:
-			sensorid, msgtimestamp, roll, pitch, heave, rawdata = decoded
-			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), roll, pitch, heave))
+		if category == reader.MOTION: # 3
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
 		
+		if category == reader.BATHY:  # 4
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
+
 		if category == reader.POSITION: # 8
-			sensorid, msgtimestamp, easting, northing, rawdata = decoded
-			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), easting, northing))
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
 		if category == reader.ECHOSOUNDER: # 9
-			sensorid, msgtimestamp, rawdata = decoded
-			print("Echosounder: %s " % (from_timestamp(msgtimestamp)))
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+			if rawdata[0:4] == b'BTH0':
+				#this is how we decode the BTH0 datagram from r2sonic 
+				BTHDatagram = r2sonicdecode.BTH0(rawdata)
+				depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
 
-		if category == reader.BATHY:  # 4
-			sensorid, msgtimestamp, depth, rawdata = decoded
-			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), depth))
+				# for all the beams in the decoded datagram compute the depth
+				for idx, angle in enumerate(BTHDatagram.angles):
+					depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
+					# print("Beam %d Angle %.3f Range %.3f Depth %.3f acrosstrack %.3f " % (idx, BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth, acrosstrack))
+					# using the  sensor gyro, easting, northing compute the positon on the sealfoor
+					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
 	navigation = reader.loadNavigation()
 	# for n in navigation:
@@ -112,20 +125,24 @@ class SBDFILEHDR:
 
 		data = fileptr.read(SBDFileHdr_len)
 		s = SBDFileHdr_unpack(data)
-		self.sensorcount 	= s[7]
-		self.datastartbyte	= s[8]
-		self.year 			= s[10]
-		self.month 			= s[11]
-		self.day 			= s[13]
-		self.hour 			= s[14]
-		self.minute 		= s[15]
-		self.second 		= s[16]
-		self.millisecond 	= s[17] # from caris
-		self.version 		= s[19] # from caris dumpeiva
-		self.date = datetime (self.year, self.month, self.day, self.hour, self.minute, self.second, self.millisecond)
+		# turn the unpack below
+
+		self.header = {
+			'sensorcount'		: s[7],
+			'datastartbyte'		: s[8],
+			'year'				: s[10],
+			'month'				: s[11],
+			'day'				: s[13],
+			'hour'				: s[14],
+			'minute'			: s[15],
+			'second'			: s[16],
+			'millisecond'		: s[17],
+			'version'			: s[19],
+		}
+		self.date = datetime (self.header['year'], self.header['month'], self.header['day'], self.header['hour'], self.header['minute'], self.header['second'], self.header['millisecond'])
 
 		print("File Name %s " % (fileptr.name))
-		print("File Version %s " % (self.version))
+		print("File Version %s " % (self.header['version']))
 		print("File Start Date %s " % (self.date))
 
 		#geodesy is at offset 366 (80 bytes)
@@ -170,7 +187,7 @@ class SBDFILEHDR:
 
 		# print("Header Instrument record at byte offset: %d " % (fileptr.tell()))
 		fileptr.seek(1060, 0)
-		for idx in range(0,self.sensorcount + 1):
+		for idx in range(0,self.header['sensorcount'] + 1):
 			msg_fmt 		= '8B 32s H'
 			msg_len 		= struct.calcsize(msg_fmt)
 			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
@@ -300,7 +317,7 @@ class SBDFILEHDR:
 
 		# thats the header complete. we can now advance to the datagrams...
 		#the header has a pointer to the start of the data, so lets set the file pointer there now.		
-		fileptr.seek(self.datastartbyte+20,0)
+		fileptr.seek(self.header['datastartbyte']+20,0)
 		print("Completed reading header at byte offset: %d " % (fileptr.tell()))
 
 	#########################################################################################
@@ -357,15 +374,26 @@ class SBDReader:
 		#the file is of a sensible size so open it.
 		self.SBDfilehdr = SBDFILEHDR(self.fileptr)
 
+		self.sensor = {}
+		self.sensor['gyro'] = 0
+		self.sensor['gyromc'] = 0
+		self.sensor['roll'] = 0
+		self.sensor['pitch'] = 0
+		self.sensor['heave'] = 0
+		self.sensor['depth'] = 0
+		self.sensor['velocity'] = 0
+		self.sensor['easting'] = 0
+		self.sensor['northing'] = 0
+		self.sensor['mbesname'] = ""
+
 	#########################################################################################
 	def readdatagram(self):
-		ping = None
+		'''now lets try to read the data packet header which is 32 bytes...'''
+
 		# remember the start position, so we can easily comput the position of the next packet
 		currentPacketPosition = self.fileptr.tell()
-		print("reading datagram from currentpos %d %s" % (currentPacketPosition, hex(currentPacketPosition)))
+		# print("reading datagram from currentpos %d %s" % (currentPacketPosition, hex(currentPacketPosition)))
 
-		if currentPacketPosition == 13034:
-			print("pkpk")
 		data = self.fileptr.read(self.hdr_len)
 		msghdr = self.hdr_unpack(data)
 
@@ -381,15 +409,16 @@ class SBDReader:
 		msglen 						= msghdr[7] #we know this works...!!!!
 
 		if msglen == 0:
-			return None, [None, None, None, None, None]
+			return None, [None, None, None, None]
 			print("sensorid: %d msglen: %d" % (sensorid, msglen))
 		try:
-			category = sensorid
+			category = sensorid % 256
+			# if more than 256 is the secondary system we need to deal with this correctly but dont have enough informat at present so assume they are all primary
 		except:
 			category = 0
 			print("OOPS sensorid not found, skipping bytes %d" % (msglen))
 			self.fileptr.read(msglen)
-			return None, [None, None, None, None, None]
+			return None, [None, None, None, None]
 
 		if category == self.GYRO: # 2
 			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' 
@@ -401,25 +430,11 @@ class SBDReader:
 			gyro 		= s1[0]
 			gyromc 		= s1[2] 
 			rawdata 	= s1[4]
-			# print("sensorID: %d data: %s" %(sensorid, rawdata))
-			return category, [sensorid, msgtimestamp, gyro, gyromc, rawdata]
-
-		if category == self.ECHOSOUNDER: # 9
-			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' 
-			msg_fmt 	= '< 3f L' + str(msglen-16) + 's' 
-			msg_len 	= struct.calcsize(msg_fmt)
-			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
-			data 		= self.fileptr.read(msg_len)
-			s1 			= msg_unpack(data)
-			# gyro 		= s1[0]
-			# pitch 		= s1[1]
-			# roll 		= s1[2] 
-			# packetsize 	= s1[3]
-			rawdata 	= s1[4]
-			# print("sensorID: %d data: %s" %(sensorid, rawdata))
-			return category, [sensorid, msgtimestamp, rawdata]
+			self.sensor['gyro'] = gyro
+			self.sensor['gyromc'] = gyromc
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 		
-		if category == self.MOTION: # 3
+		elif category == self.MOTION: # 3
 			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' 
 			msg_fmt 	= '< 3f L' + str(msglen-16) + 's' 
 			msg_len 	= struct.calcsize(msg_fmt)
@@ -431,22 +446,10 @@ class SBDReader:
 			heave 		= s1[2] # verified
 			packetsize 	= s1[3]
 			rawdata 	= s1[4]
-			# print("sensorID: %d data: %s" %(sensorid, rawdata))
-			return category, [sensorid, msgtimestamp, roll, pitch, heave, rawdata]
-		
-		elif category == self.POSITION: # 8
-			msg_fmt = '< 2d L' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data pkpk the 3rd word could be a long int??
-			# for the first 20 bytes, 16-20 are unsigned shorts.  16-18 are the msg size, 19-20 are 0
-			msg_len 	= struct.calcsize(msg_fmt)
-			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
-			data 		= self.fileptr.read(msg_len)
-			s1 			= msg_unpack(data)
-			easting 	= s1[0]
-			northing 	= s1[1]
-			packetsize 	= s1[2]
-			rawdata 	= s1[3]
-			# print("sensorID: %d data: %s" %(sensorid, rawdata))
-			return category, [sensorid, msgtimestamp, easting, northing, rawdata]
+			self.sensor['roll'] = roll
+			self.sensor['pitch'] = pitch
+			self.sensor['heave'] = heave
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 		
 		elif category == self.BATHY: # 4
 			msg_fmt 	= '< 3f L' + str(msglen-16) + 's'
@@ -459,12 +462,57 @@ class SBDReader:
 			unknown 	= s1[2]
 			# packetsize 	= s1[3]
 			rawdata 	= s1[4]
-			# print("sensorID: %d data: %s" %(sensorid, rawdata))
-			return category, [sensorid, msgtimestamp, depth, rawdata]
+			self.sensor['depth'] = depth
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+		
+		elif category == self.AUXILIARY: # 5
+			msg_fmt 	= '< f' + str(msglen-4) + 's'
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			velocity 	= s1[0]
+			# unknown 	= s1[1]
+			# unknown 	= s1[2]
+			# packetsize= s1[3]
+			rawdata 	= s1[1]
+			self.sensor['velocity'] = velocity
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+		
+		elif category == self.POSITION: # 8
+			msg_fmt = '< 2d L' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data pkpk the 3rd word could be a long int??
+			# for the first 20 bytes, 16-20 are unsigned shorts.  16-18 are the msg size, 19-20 are 0
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			easting 	= s1[0]
+			northing 	= s1[1]
+			packetsize 	= s1[2]
+			rawdata 	= s1[3]
+			self.sensor['easting'] = easting
+			self.sensor['northing'] = northing
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+
+		elif category == self.ECHOSOUNDER: # 9
+			#for a reson 2000 serie there is no decoded section.  its jus thte raw bytes, starting with BTH0
+			msg_fmt 	= '<' + str(msglen) + 's' 
+			msg_len 	= struct.calcsize(msg_fmt)
+			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
+			data 		= self.fileptr.read(msg_len)
+			s1 			= msg_unpack(data)
+			rawdata 	= s1[0]
+			self.sensor['mbesname'] = rawdata[0:4]
+			#check to see if the rawdata first 4 bytes are BTH0
+			# if rawdata[0:4] == b'BTH0':
+			# 	#this is how we decode the BTH0 datagram
+			# 	BTHDatagram = r2sonicdecode.BTH0(rawdata)
+			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+		
 		else:
 			print("OOPS sensorid %d not found, skipping bytes %d" % (sensorid, msglen))
 			data = self.fileptr.read(msglen)
-			return None, [None, None, None, None, None]
+			return None, [None, None, None, None]
 
 	#########################################################################################
 	def __str__(self):
@@ -490,15 +538,18 @@ class SBDReader:
 	def loadNavigation(self):
 		navigation = []
 		self.rewind()
-		heading = 0
 		start_time = time.time() # time the process
 		while self.moreData() > 0:
 			category, decoded = self.readdatagram()
 
+			if category == self.GYRO:
+				sensorid, msgtimestamp, sensor, rawdata = decoded
+				print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+
 			if category == self.POSITION: # 8
-				sensorid, msgtimestamp, easting, northing, rawdata = decoded
-				navigation.append([msgtimestamp, easting, northing, heading])
-				print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), easting, northing))
+				sensorid, msgtimestamp, sensor, rawdata = decoded
+				navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
+				print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 				# nmeastring=rawdata.decode('utf-8').rstrip('\x00')
 				# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
 				# navigation.append([msgtimestamp, nmeaobject.lon, nmeaobject.lat, heading])

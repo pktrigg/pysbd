@@ -6,7 +6,8 @@
             "type": "python",
             "request": "launch",
             "stopOnEntry": false,
-            "program": "${file}",
+            "program": "pysbd.py",
+            // "program": "${file}",
             "python": "python.exe",
             "debugOptions": [
                 "WaitOnAbnormalExit",

@@ -47,21 +47,30 @@ Done
 * extract heading from gyro datagrams 
 * extract depth from depth datagrams 
 * extract motion from motion datagrams 
+* convert variables into dictionary throughout so its clean
+* implement R2sonic BTH0 decode
+* implement conversion from angle/tt to Dx,Dz
+* implement a stateful sensor dictionary
+* loadnavigation function is now working so we can now merge into survey2ssdm
+* parse the echosounder processed datagram.  I dont see a format descriptor in the datagram header which looks encouraging
+* figure out the format of the raw datagram for echosounder datagrams
+* figure out the ID on each record so we know which sensor it is from (its the category)
+* test with a bunch of sbd files.
 
 2Do
 ===
 * some of the fields in the msgheader are still unknown.  I am sure they are there for a reason!
-* parse the echosounder processed datagram.  I dont see a format descriptor in the datagram header which looks encouraging
-* figure out the format of the raw datagram for echosounder datagrams
 * figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack from the eiva developers!
-* figure out the ID on each record so we know which sensor it is from
 
 ```
     # opening the file reads the header
     r = SBDReader(<filename>)
         # we can then loop through all packets, 
         while r.moreData():
-            record = r.readDatagram()
+    		category, decoded = reader.readdatagram()
+    		if category == reader.GYRO:
+    			sensorid, msgtimestamp, sensor, rawdata = decoded
+	    		print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
     # close the File 
     r.close()
 ```
