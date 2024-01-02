@@ -1,4 +1,4 @@
-pysbd_survey
+sbd_survey
 =====
 * created:       December 2023
 * by:            paul.kennedy@guardiangeomatics.com
@@ -57,10 +57,12 @@ Done
 * figure out the ID on each record so we know which sensor it is from (its the category)
 * test with a bunch of sbd files.
 * add arg parser so we can test all files in folder for thorough testing
+* make sbd a pip installable package
 
 2Do
 ===
-* make pysbd a pip installable package
+* make pygeodesy_survey a pip installable package
+
 * produce a laz file from the sbd file MBES data.
 * convert raw bathy range/traveltime to Dx,Dz
 * apply current roll to the take off angles in RT-->Dxz calculation
@@ -85,13 +87,30 @@ Done
     r.close()
 ```
 
-Package creation notes
+Package Creation Notes
 ===
-# we use twine to create and upload
+
+* we use twine to create and upload...
+```
 pip install twine
+``````
 
-# to create package
+* to create package...
+```
 python -m build
+``````
 
-# to upload package
+* to upload package...
+```
 python -m twine upload --repository testpypi dist/* --verbose
+``````
+
+* to install the package
+```
+pip install -i https://test.pypi.org/simple/ sbd-survey
+``````
+
+* to uninstall the package
+```
+pip uninstall -y sbd-survey
+``````

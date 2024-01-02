@@ -1,6 +1,6 @@
 [project]
-name = "pysbd_survey"
-version = "0.0.1"
+name = "sbd_survey"
+version = "1.0.6"
 authors = [
   { name="Paul Kennedy", email="pktrigg@gmail.com" },
 ]
@@ -14,11 +14,11 @@ classifiers = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/pysbd_survey"]
+packages = ["src/sbd_survey"]
 
 [project.urls]
-Homepage = "https://github.com/pktrigg/pysbd_survey"
-Issues = "https://github.com/pktrigg/pysbd_survey/issues"
+Homepage = "https://github.com/pktrigg/sbd_survey"
+Issues = "https://github.com/pktrigg/sbd_survey/issues"
 
 [build-system]
 requires = ["hatchling"]

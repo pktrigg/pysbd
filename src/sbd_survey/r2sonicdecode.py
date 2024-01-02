@@ -10,7 +10,7 @@ import pprint
 ###############################################################################
 class BTH0:
 	'''decode as per following documentation'''
-	'''file:///C:/ggtools/pysbd/Sonic%202022-2024-2026%20Operation%20Manual%20v6.3r003.pdf'''
+	'''file:///C:/ggtools/sbd/Sonic%202022-2024-2026%20Operation%20Manual%20v6.3r003.pdf'''
 
 	def __init__(self, rawdata=None):
 		self.header = None

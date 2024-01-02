@@ -6,8 +6,8 @@
             "type": "python",
             "request": "launch",
             "stopOnEntry": false,
-            "program": "src/pysbd_pktrigg/pysbd.py",
-            // "program": "${file}",
+            //"program": "src/sbd_pktrigg/sbd.py",
+            "program": "${file}",
             "python": "python.exe",
             "debugOptions": [
                 "WaitOnAbnormalExit",

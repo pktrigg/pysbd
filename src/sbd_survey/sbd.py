@@ -1,87 +1,41 @@
-#name:			pysbd
+#name:			sbd_survey
 #created:		May 2023
 #by:			paul.kennedy@guardiangeomatics.com
 #description:	python module to read an EIVA binary SBD file
-#notes:			See main at end of script for example how to use this
 #See readme.md for details
-# sensorcategory
-# 3 = ZDA
-# 36 = gyro
-# 35 = motion
-# 7 SVS
-# 13 rov depth
-# 17 positionining
-# 9 usbl
-# 33 mbes
 
 import os
 import sys
 import pprint
 import struct
-import os.path
-from datetime import datetime
 import time
-from argparse import ArgumentParser
-import math
-import os.path
-from glob import glob
-import fnmatch
-import numpy as np
-import logging
+from datetime import datetime
 
-#
-import geodetic
-import fileutils
-# from pynmeagps import NMEAReader
+# local imports
+from pathlib import Path
+import sys
+# path_root = Path(__file__).parents[2]
+path_root = Path(__file__).parent
+sys.path.append(str(path_root))
+
 import r2sonicdecode
 import refraction
+
+# from sbd_survey import r2sonicdecode
+# from sbd_survey import refraction
 
 ###############################################################################
 def main():
 
-	parser = ArgumentParser(description='\n * Process one or many group folders.')
-	parser.add_argument('-i', 			dest='inputfolder', action='store', 		default='.',	help='the root folder to find one more more group folders. Pease refer to procedure for the group folder layout - e.g. c:/mysurveyarea')
-	parser.add_argument('-epsg', 		dest='epsg', 		action='store', 		default="", help='Specify an output EPSG code for transforming from WGS84 to East,North,e.g. -epsg 4326')
-	
-	args = parser.parse_args()
+	filename = "C:/ggtools/sbd_survey/J355N001.SBD"
 
-	version = 1.4
-	args.minduration = "10"
-
-	if args.epsg == '':
-		log("ERROR. You MUST provide an EPSG code")
-	# these files have been used for testing...
-
-	if args.inputfolder == '.':
-		args.inputfolder = os.getcwd()
-
-	if os.path.isdir(args.inputfolder):
-		files = fileutils.findFiles2(False, args.inputfolder, "*.sbd")
-	else:
-		files = [args.inputfolder]
-		args.inputfolder = os.path.dirname(args.inputfolder)
-
-	LOG_FILENAME = os.path.join(args.inputfolder, 'ggmatch.log')
-	#delete the log file before we start
-	deletefile(LOG_FILENAME)
-	logging.basicConfig(filename=LOG_FILENAME,level=logging.INFO)
-	logging.info("Process started at %s" % (datetime.now()))
-	log("GGMatch Multibeam alignment tool. Part of GGTools, Copyright Guardian Geomatics 2022.")
-	log("GGMatch version %s" % (version))
-	log("Process started at %s" % (datetime.now()))
-	log("Using EPSG code at %s" % (args.epsg))
-
-
-	for filename in files:
-		process(args, filename)	
-
-	# files.appen()"C:/ggtools/pysbd/J129N032.SBD")
-	# filename = "C:/ggtools/pysbd/J355N005.SBD"
-	# filename = "C:/ggtools/pysbd/J355N001.SBD"
-
-def process (args, filename):
+	process(filename)	
+		
+###############################################################################
+def process (filename):
 	#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  The reader will read the initial header so we can get to grips with the file contents with ease.
-	print ( "Processing file:", filename)
+	
+	# print ( "Processing file:", filename)
 	reader = SBDReader(filename)
 	reader.SBDfilehdr.printsensorconfiguration()
 
@@ -130,7 +84,7 @@ def process (args, filename):
 	print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
 
 ####################################################################################################################
-###############################################################################
+####################################################################################################################
 class SENSOR:
 	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0, offsetheave = 0):
 
@@ -183,9 +137,9 @@ class SBDFILEHDR:
 		}
 		self.date = datetime (self.header['year'], self.header['month'], self.header['day'], self.header['hour'], self.header['minute'], self.header['second'], self.header['millisecond'])
 
-		print("File Name %s " % (fileptr.name))
-		print("File Version %s " % (self.header['version']))
-		print("File Start Date %s " % (self.date))
+		# print("File Name %s " % (fileptr.name))
+		# print("File Version %s " % (self.header['version']))
+		# print("File Start Date %s " % (self.date))
 
 		#geodesy is at offset 366 (80 bytes)
 		fileptr.seek(366, 0)
@@ -195,7 +149,7 @@ class SBDFILEHDR:
 		data = fileptr.read(msg_len)
 		s = msg_unpack(data)
 		self.ellipsiod = s[0].decode('utf-8').rstrip('\x00')
-		print (self.ellipsiod)
+		# print (self.ellipsiod)
 
 		#geodesy UTM is at 446
 		fileptr.seek(446, 0)
@@ -205,7 +159,7 @@ class SBDFILEHDR:
 		data = fileptr.read(msg_len)
 		s = msg_unpack(data)
 		self.projection = s[0].decode('utf-8').rstrip('\x00')
-		print (self.projection)
+		# print (self.projection)
 		
 		#each sensor definition takes 256 bytes.  
 		#looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
@@ -360,7 +314,7 @@ class SBDFILEHDR:
 		# thats the header complete. we can now advance to the datagrams...
 		#the header has a pointer to the start of the data, so lets set the file pointer there now.		
 		fileptr.seek(self.header['datastartbyte']+20,0)
-		print("Completed reading header at byte offset: %d " % (fileptr.tell()))
+		# print("Completed reading header at byte offset: %d " % (fileptr.tell()))
 
 	#########################################################################################
 	def printsensorconfiguration(self):
@@ -401,7 +355,7 @@ class SBDReader:
 
 	#########################################################################################
 	def __init__(self, SBDfilename):
-		if not os.path.isfile(SBDfilename):
+		if not os.path.exists(SBDfilename):
 			print ("file not found:", SBDfilename)
 		self.filename = SBDfilename
 		self.fileptr = open(SBDfilename, 'rb')
@@ -452,7 +406,6 @@ class SBDReader:
 
 		if msglen == 0:
 			return None, [None, None, None, None]
-			print("sensorid: %d msglen: %d" % (sensorid, msglen))
 		try:
 			category = sensorid % 256
 			# if more than 256 is the secondary system we need to deal with this correctly but dont have enough informat at present so assume they are all primary
@@ -586,12 +539,12 @@ class SBDReader:
 
 			if category == self.GYRO:
 				sensorid, msgtimestamp, sensor, rawdata = decoded
-				print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+				# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 
 			if category == self.POSITION: # 8
 				sensorid, msgtimestamp, sensor, rawdata = decoded
 				navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
-				print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+				# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 				# nmeastring=rawdata.decode('utf-8').rstrip('\x00')
 				# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
 				# navigation.append([msgtimestamp, nmeaobject.lon, nmeaobject.lat, heading])
@@ -609,37 +562,6 @@ def to_timestamp(dateObject):
 def from_timestamp(unixtime):
 	return datetime.utcfromtimestamp(unixtime)
 
-def dateToSecondsSinceMidnight(dateObject):
-	return (dateObject - dateObject.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds()
-
-###############################################################################
-def update_progress(job_title, progress):
-	length = 20 # modify this to change the length
-	block = int(round(length*progress))
-	msg = "\r{0}: [{1}] {2}%".format(job_title, "#"*block + "-"*(length-block), round(progress*100, 2))
-	if progress >= 1: msg += " DONE\r\n"
-	sys.stdout.write(msg)
-	sys.stdout.flush()
-
-###############################################################################
-def	log(msg, error = False, printmsg=True):
-		if printmsg:
-			print (msg)
-		if error == False:
-			logging.info(msg)
-		else:
-			logging.error(msg)
-
-###############################################################################
-def deletefile(filename):
-	if os.path.exists(filename):
-		try:			
-			os.remove(filename)
-		except:	
-			return
-			#log("file is locked, cannot delete: %s " % (filename))
-
-#########################################################################################
 #########################################################################################
 #########################################################################################
 if __name__ == "__main__":

@@ -133,9 +133,9 @@ def ray_trace_to_time(take_off_angle, measured_travel_time, depth_velocity_profi
 #     return new_depth, new_horizontal_distance
 
 # Example usage
-depth_velocity_profile = [(0, 1500), (100, 1550), (200, 1600)]  # Example profile
-take_off_angle = 30  # Degrees
-measured_travel_time = 0.1  # Example travel time in seconds
-final_depth, final_horizontal_distance = ray_trace_to_time(take_off_angle, measured_travel_time, depth_velocity_profile)
+# depth_velocity_profile = [(0, 1500), (100, 1550), (200, 1600)]  # Example profile
+# take_off_angle = 30  # Degrees
+# measured_travel_time = 0.1  # Example travel time in seconds
+# final_depth, final_horizontal_distance = ray_trace_to_time(take_off_angle, measured_travel_time, depth_velocity_profile)
 
-print(f"Final Depth: {final_depth} meters, Final Horizontal Distance: {final_horizontal_distance} meters")
+# print(f"Final Depth: {final_depth} meters, Final Horizontal Distance: {final_horizontal_distance} meters")
