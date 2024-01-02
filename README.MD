@@ -1,4 +1,4 @@
-pysbd
+pysbd_survey
 =====
 * created:       December 2023
 * by:            paul.kennedy@guardiangeomatics.com
@@ -56,9 +56,19 @@ Done
 * figure out the format of the raw datagram for echosounder datagrams
 * figure out the ID on each record so we know which sensor it is from (its the category)
 * test with a bunch of sbd files.
+* add arg parser so we can test all files in folder for thorough testing
 
 2Do
 ===
+* make pysbd a pip installable package
+* produce a laz file from the sbd file MBES data.
+* convert raw bathy range/traveltime to Dx,Dz
+* apply current roll to the take off angles in RT-->Dxz calculation
+* implement a refraction computation to permit high quality conversions in python
+* convert Dxz to east/north/depth point cloud
+* convert point cloud to laz file
+* implement -s to make a summary of the file contents to a json string
+* to make a sensible loadnavigation function we need WGS84 coordinates.  unfortunately the sbd position datagrams only have decoded positions in easting, northing, so we need the user to specify epsg code so we can convert back to lat/lon
 * some of the fields in the msgheader are still unknown.  I am sure they are there for a reason!
 * figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack from the eiva developers!
 
@@ -74,3 +84,14 @@ Done
     # close the File 
     r.close()
 ```
+
+Package creation notes
+===
+# we use twine to create and upload
+pip install twine
+
+# to create package
+python -m build
+
+# to upload package
+python -m twine upload --repository testpypi dist/* --verbose

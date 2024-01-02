@@ -1,0 +1,25 @@
+[project]
+name = "pysbd_survey"
+version = "0.0.1"
+authors = [
+  { name="Paul Kennedy", email="pktrigg@gmail.com" },
+]
+description = "python library for reading EIVA SBD binary files containing survey data"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pysbd_survey"]
+
+[project.urls]
+Homepage = "https://github.com/pktrigg/pysbd_survey"
+Issues = "https://github.com/pktrigg/pysbd_survey/issues"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
