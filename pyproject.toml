@@ -1,6 +1,6 @@
 [project]
 name = "sbd_survey"
-version = "1.0.6"
+version = "1.0.8"
 authors = [
   { name="Paul Kennedy", email="pktrigg@gmail.com" },
 ]

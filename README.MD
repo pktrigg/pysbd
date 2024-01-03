@@ -58,6 +58,7 @@ Done
 * test with a bunch of sbd files.
 * add arg parser so we can test all files in folder for thorough testing
 * make sbd a pip installable package
+* loadnavigation now returns a dictionary as well as a flat list
 
 2Do
 ===
@@ -75,16 +76,35 @@ Done
 * figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack from the eiva developers!
 
 ```
-    # opening the file reads the header
-    r = SBDReader(<filename>)
-        # we can then loop through all packets, 
-        while r.moreData():
-    		category, decoded = reader.readdatagram()
-    		if category == reader.GYRO:
-    			sensorid, msgtimestamp, sensor, rawdata = decoded
-	    		print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
-    # close the File 
-    r.close()
+	reader = sbd.SBDReader(filename)
+	reader.SBDfilehdr.printsensorconfiguration()
+
+	while reader.moreData():
+		category, decoded = reader.readdatagram()
+		if category == reader.GYRO:
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+
+		if category == reader.MOTION: # 3
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
+		
+		if category == reader.BATHY:  # 4
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
+
+		if category == reader.POSITION: # 8
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+
+		if category == reader.ECHOSOUNDER: # 9
+			sensorid, msgtimestamp, sensor, rawdata = decoded
+			print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+			if rawdata[0:4] == b'BTH0':
+				#this is how we decode the BTH0 datagram from r2sonic 
+				BTHDatagram = r2sonicdecode.BTH0(rawdata)
+	reader.close()
+	print("Complete reading SBD file :-)")
 ```
 
 Package Creation Notes

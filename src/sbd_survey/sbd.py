@@ -75,9 +75,9 @@ def process (filename):
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
-	navigation = reader.loadNavigation()
-	# for n in navigation:
- 		# print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
+	navigation, navigation2 = reader.loadNavigation()
+	for n in navigation2:
+ 		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
 
 	reader.close()
 	print("Complete reading SBD file :-)")
@@ -371,6 +371,7 @@ class SBDReader:
 		self.SBDfilehdr = SBDFILEHDR(self.fileptr)
 
 		self.sensor = {}
+		self.sensor['timestamp'] = 0
 		self.sensor['gyro'] = 0
 		self.sensor['gyromc'] = 0
 		self.sensor['roll'] = 0
@@ -425,6 +426,7 @@ class SBDReader:
 			gyro 		= s1[0]
 			gyromc 		= s1[2] 
 			rawdata 	= s1[4]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['gyro'] = gyro
 			self.sensor['gyromc'] = gyromc
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
@@ -441,6 +443,7 @@ class SBDReader:
 			heave 		= s1[2] # verified
 			packetsize 	= s1[3]
 			rawdata 	= s1[4]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['roll'] = roll
 			self.sensor['pitch'] = pitch
 			self.sensor['heave'] = heave
@@ -457,6 +460,7 @@ class SBDReader:
 			unknown 	= s1[2]
 			# packetsize 	= s1[3]
 			rawdata 	= s1[4]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['depth'] = depth
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 		
@@ -471,6 +475,7 @@ class SBDReader:
 			# unknown 	= s1[2]
 			# packetsize= s1[3]
 			rawdata 	= s1[1]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['velocity'] = velocity
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 		
@@ -485,6 +490,7 @@ class SBDReader:
 			northing 	= s1[1]
 			packetsize 	= s1[2]
 			rawdata 	= s1[3]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['easting'] = easting
 			self.sensor['northing'] = northing
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
@@ -497,6 +503,7 @@ class SBDReader:
 			data 		= self.fileptr.read(msg_len)
 			s1 			= msg_unpack(data)
 			rawdata 	= s1[0]
+			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['mbesname'] = rawdata[0:4]
 			#check to see if the rawdata first 4 bytes are BTH0
 			# if rawdata[0:4] == b'BTH0':
@@ -531,7 +538,9 @@ class SBDReader:
 
 	#########################################################################################
 	def loadNavigation(self):
+		
 		navigation = []
+		navigation2 = []
 		self.rewind()
 		start_time = time.time() # time the process
 		while self.moreData() > 0:
@@ -544,6 +553,7 @@ class SBDReader:
 			if category == self.POSITION: # 8
 				sensorid, msgtimestamp, sensor, rawdata = decoded
 				navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
+				navigation2.append(sensor)
 				# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 				# nmeastring=rawdata.decode('utf-8').rstrip('\x00')
 				# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
@@ -551,7 +561,7 @@ class SBDReader:
 
 		self.rewind()
 		# print("Get navigation Range Duration %.3fs" % (time.time() - start_time)) # print the processing time.
-		return (navigation)
+		return (navigation, navigation2)
 
 ###############################################################################
 # TIME HELPER FUNCTIONS

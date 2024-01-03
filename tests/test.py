@@ -4,15 +4,15 @@ from pathlib import Path
 from datetime import datetime
 
 # when developing locally use this...
-sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
-import sbd
-import r2sonicdecode
-import refraction
+# sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
+# import sbd
+# import r2sonicdecode
+# import refraction
 
-# # when installed use this...
-# from sbd_survey import sbd
-# from sbd_survey import r2sonicdecode
-# from sbd_survey import refraction
+# when installed use this...
+from sbd_survey import sbd
+from sbd_survey import r2sonicdecode
+from sbd_survey import refraction
 
 ###############################################################################
 def main():
