@@ -59,6 +59,7 @@ Done
 * add arg parser so we can test all files in folder for thorough testing
 * make sbd a pip installable package
 * loadnavigation now returns a dictionary as well as a flat list
+* removed dependency on refraction and r2sonic decode
 
 2Do
 ===

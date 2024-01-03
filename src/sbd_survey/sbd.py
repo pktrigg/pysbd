@@ -18,8 +18,8 @@ import sys
 path_root = Path(__file__).parent
 sys.path.append(str(path_root))
 
-import r2sonicdecode
-import refraction
+# import r2sonicdecode
+# import refraction
 
 # from sbd_survey import r2sonicdecode
 # from sbd_survey import refraction
@@ -27,7 +27,8 @@ import refraction
 ###############################################################################
 def main():
 
-	filename = "C:/ggtools/sbd_survey/J355N001.SBD"
+	# filename = "C:/ggtools/sbd_survey/J355N001.SBD"
+	filename = "C:/sampledata/sbd_srov/231120002308.SBD"
 
 	process(filename)	
 		
@@ -62,22 +63,22 @@ def process (filename):
 		if category == reader.ECHOSOUNDER: # 9
 			sensorid, msgtimestamp, sensor, rawdata = decoded
 			print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
-			if rawdata[0:4] == b'BTH0':
+			# if rawdata[0:4] == b'BTH0':
 				#this is how we decode the BTH0 datagram from r2sonic 
-				BTHDatagram = r2sonicdecode.BTH0(rawdata)
-				depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
+				# BTHDatagram = r2sonicdecode.BTH0(rawdata)
+				# depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
 
 				# for all the beams in the decoded datagram compute the depth
-				for idx, angle in enumerate(BTHDatagram.angles):
-					depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
+				# for idx, angle in enumerate(BTHDatagram.angles):
+					# depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
 					# print("Beam %d Angle %.3f Range %.3f Depth %.3f acrosstrack %.3f " % (idx, BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth, acrosstrack))
 					# using the  sensor gyro, easting, northing compute the positon on the sealfoor
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
 	navigation, navigation2 = reader.loadNavigation()
-	for n in navigation2:
- 		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
+	for n in navigation:
+		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
 
 	reader.close()
 	print("Complete reading SBD file :-)")
@@ -496,8 +497,8 @@ class SBDReader:
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 
 		elif category == self.ECHOSOUNDER: # 9
-			#for a reson 2000 serie there is no decoded section.  its jus thte raw bytes, starting with BTH0
-			msg_fmt 	= '<' + str(msglen) + 's' 
+			#for a MBES there is no decoded section.  its just the raw bytes, starting with BTH0 for a reson 2024 or MRZ
+			msg_fmt 	= '< ' + str(msglen) + 's' 
 			msg_len 	= struct.calcsize(msg_fmt)
 			msg_unpack 	= struct.Struct(msg_fmt).unpack_from
 			data 		= self.fileptr.read(msg_len)
