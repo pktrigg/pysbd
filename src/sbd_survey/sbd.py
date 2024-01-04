@@ -9,7 +9,8 @@ import sys
 import pprint
 import struct
 import time
-from datetime import datetime
+from datetime import datetime, timezone
+
 
 # local imports
 from pathlib import Path
@@ -28,8 +29,10 @@ sys.path.append(str(path_root))
 def main():
 
 	# filename = "C:/ggtools/sbd_survey/J355N001.SBD"
-	filename = "C:/sampledata/sbd_srov/231120002308.SBD"
-
+	# filename = "C:/sampledata/sbd_srov/231120002308.SBD"
+	# filename = "c:/sampledata/sbd/Langenuen_SBD_North_v1/01_sbd/J354N003.SBD"
+	filename = "C:/sampledata/sbd/badposition/J354N018.SBD"
+	# filename =  "C:/sampledata/sbd_srov/231120002308.SBD"
 	process(filename)	
 		
 ###############################################################################
@@ -62,7 +65,7 @@ def process (filename):
 
 		if category == reader.ECHOSOUNDER: # 9
 			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+			# print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
 			# if rawdata[0:4] == b'BTH0':
 				#this is how we decode the BTH0 datagram from r2sonic 
 				# BTHDatagram = r2sonicdecode.BTH0(rawdata)
@@ -76,7 +79,7 @@ def process (filename):
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
-	navigation, navigation2 = reader.loadNavigation()
+	navigation, navigation2 = reader.loadnavigation()
 	for n in navigation:
 		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
 
@@ -184,133 +187,139 @@ class SBDFILEHDR:
 
 		# print("Header Instrument record at byte offset: %d " % (fileptr.tell()))
 		fileptr.seek(1060, 0)
-		for idx in range(0,self.header['sensorcount'] + 1):
-			msg_fmt 		= '8B 32s H'
-			msg_len 		= struct.calcsize(msg_fmt)
-			msg_unpack 		= struct.Struct(msg_fmt).unpack_from
-			data 			= fileptr.read(msg_len)
-			hdr 				= msg_unpack(data)
-			sensortype		= hdr[0] # as per instruments.xml file in naviscan folder
-			unknown1		= hdr[1]
-			sensorcategory	= hdr[2]
-			sensordisabled	= hdr[3]	
-			unknown3		= hdr[4]	
-			unknown4		= hdr[5]	
-			unknown5		= hdr[6]	
-			unknown6		= hdr[7]	
-			sensorname 		= hdr[8].decode('utf-8').rstrip('\x00')
-			porttype		= hdr[9]
-			# print("sensorname %s disabled %d" % (sensorname, sensordisabled))
-
-			#now we need to read the rest of the structure based on the port type		
-			if porttype == 1: # serial ports...
-				#looks like we need 14 bytes for a com port definition
-				msg_fmt 		= '<7H 11f 78H'
+		try:
+			for idx in range(0,self.header['sensorcount'] + 1):
+				msg_fmt 		= '8B 32s H'
 				msg_len 		= struct.calcsize(msg_fmt)
 				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 				data 			= fileptr.read(msg_len)
-				s 				= msg_unpack(data)
-				# sensordisabled 		= s[0]
-				port 			= s[1]
-				baud 			= s[3]
-				parity 			= s[4]
-				databits 		= s[5]
-				stopbits 		= s[6]
-				ipaddress = str("0.0.0.0")
-				latency			= s[8]
-				offsetx			= s[10]
-				offsety			= s[11]
-				offsetz			= s[12]
-				offsetheading	= s[13]
-				depthc_o	= s[13]
-				offsetroll		= s[14]
-				offsetpitch		= s[15]
-				offsetheave		= s[16]
-				gravity			= s[18]
+				hdr 				= msg_unpack(data)
+				sensortype		= hdr[0] # as per instruments.xml file in naviscan folder
+				unknown1		= hdr[1]
+				sensorcategory	= hdr[2]
+				sensordisabled	= hdr[3]	
+				unknown3		= hdr[4]	
+				unknown4		= hdr[5]	
+				unknown5		= hdr[6]	
+				unknown6		= hdr[7]	
+				sensorname 		= hdr[8].decode('utf-8').rstrip('\x00')
+				porttype		= hdr[9]
+				# print("sensorname %s disabled %d" % (sensorname, sensordisabled))
 
-			elif porttype == 2: # UDP ports...
-				msg_fmt 		= '<2H 6B 11f 80H'
-				#looks like we need 14 bytes for a ethernet port definition
-				msg_len 		= struct.calcsize(msg_fmt)
-				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
-				data 			= fileptr.read(msg_len)
-				s 				= msg_unpack(data)
-				portnumber 		= s[1]
-				ip1 			= s[4]
-				ip2 			= s[5]
-				ip3 			= s[6]
-				ip4 			= s[7]
-				ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-				stopbits 		= s[7]
-				latency			= s[9]
-				offsetx			= s[10]
-				offsety			= s[11]
-				offsetz			= s[12]
-				offsetheading	= s[13]
-				offsetroll		= s[14]
-				offsetpitch		= s[15]
-				offsetheave		= s[16]
-				gravity			= s[18]
-				depthc_o	= s[13]
+				#now we need to read the rest of the structure based on the port type		
+				if porttype == 1: # serial ports...
+					#looks like we need 14 bytes for a com port definition
+					msg_fmt 		= '<7H 11f 78H'
+					msg_len 		= struct.calcsize(msg_fmt)
+					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+					data 			= fileptr.read(msg_len)
+					s 				= msg_unpack(data)
+					# sensordisabled 		= s[0]
+					port 			= s[1]
+					baud 			= s[3]
+					parity 			= s[4]
+					databits 		= s[5]
+					stopbits 		= s[6]
+					ipaddress = str("0.0.0.0")
+					latency			= s[8]
+					offsetx			= s[10]
+					offsety			= s[11]
+					offsetz			= s[12]
+					depthc_o	= s[13]
+					offsetroll		= s[14]
+					offsetpitch		= s[15]
+					offsetheading	= s[16]
+					# offsetheave		= s[16]
+					gravity			= s[18]
 
-			elif porttype == 4: # ATTU ports...
-				msg_fmt 		= '<2H 6B 11f 80H'
-				#looks like we need 14 bytes for a ethernet port definition
-				msg_len 		= struct.calcsize(msg_fmt)
-				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
-				data 			= fileptr.read(msg_len)
-				s 				= msg_unpack(data)
-				portnumber 		= s[1]
-				ip1 			= s[4]
-				ip2 			= s[5]
-				ip3 			= s[6]
-				ip4 			= s[7]
-				ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-				stopbits 		= s[7]
-				latency			= s[9]
-				offsetx			= s[10]
-				offsety			= s[11]
-				offsetz			= s[12]
-				offsetheading	= s[13]
-				offsetroll		= s[14]
-				offsetpitch		= s[15]
-				offsetheave		= s[16]
-				gravity			= s[18]
-				depthc_o	= s[13]
+				elif porttype == 2: # UDP ports...
+					msg_fmt 		= '<2H 6B 11f 80H'
+					#looks like we need 14 bytes for a ethernet port definition
+					msg_len 		= struct.calcsize(msg_fmt)
+					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+					data 			= fileptr.read(msg_len)
+					s 				= msg_unpack(data)
+					portnumber 		= s[1]
+					ip1 			= s[4]
+					ip2 			= s[5]
+					ip3 			= s[6]
+					ip4 			= s[7]
+					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
+					stopbits 		= s[7]
+					latency			= s[9]
+					offsetx			= s[10]
+					offsety			= s[11]
+					offsetz			= s[12]
+					# offsetheading	= s[13]
+					offsetroll		= s[14]
+					offsetpitch		= s[15]
+					offsetheading	= s[16]
+					# offsetheave		= s[16]
+					gravity			= s[18]
+					depthc_o	= s[13]
 
-			else: # anything else
-				msg_fmt 		= '<2H 6B 11f 80H'
-				#looks like we need 14 bytes for a ethernet port definition
-				msg_len 		= struct.calcsize(msg_fmt)
-				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
-				data 			= fileptr.read(msg_len)
-				s 				= msg_unpack(data)
-				portnumber 		= s[1]
-				ip1 			= s[4]
-				ip2 			= s[5]
-				ip3 			= s[6]
-				ip4 			= s[7]
-				ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-				stopbits 		= s[7]
-				latency			= s[9]
-				offsetx			= s[10]
-				offsety			= s[11]
-				offsetz			= s[12]
-				offsetheading	= s[13]
-				offsetroll		= s[14]
-				offsetpitch		= s[15]
-				offsetheave		= s[16]
-				gravity			= s[18]
-				depthc_o	= s[13]
+				elif porttype == 4: # ATTU ports...
+					msg_fmt 		= '<2H 6B 11f 80H'
+					#looks like we need 14 bytes for a ethernet port definition
+					msg_len 		= struct.calcsize(msg_fmt)
+					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+					data 			= fileptr.read(msg_len)
+					s 				= msg_unpack(data)
+					portnumber 		= s[1]
+					ip1 			= s[4]
+					ip2 			= s[5]
+					ip3 			= s[6]
+					ip4 			= s[7]
+					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
+					stopbits 		= s[7]
+					latency			= s[9]
+					offsetx			= s[10]
+					offsety			= s[11]
+					offsetz			= s[12]
+					# offsetheading	= s[13]
+					offsetroll		= s[14]
+					offsetpitch		= s[15]
+					# offsetheave		= s[16]
+					offsetheading	= s[16]
+					gravity			= s[18]
+					depthc_o	= s[13]
 
-			#skip the disabled sensors
-			if sensordisabled != 0:
-				continue
+				else: # anything else
+					msg_fmt 		= '<2H 6B 11f 80H'
+					#looks like we need 14 bytes for a ethernet port definition
+					msg_len 		= struct.calcsize(msg_fmt)
+					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
+					data 			= fileptr.read(msg_len)
+					s 				= msg_unpack(data)
+					portnumber 		= s[1]
+					ip1 			= s[4]
+					ip2 			= s[5]
+					ip3 			= s[6]
+					ip4 			= s[7]
+					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
+					stopbits 		= s[7]
+					latency			= s[9]
+					offsetx			= s[10]
+					offsety			= s[11]
+					offsetz			= s[12]
+					# offsetheading	= s[13]
+					offsetroll		= s[14]
+					offsetpitch		= s[15]
+					# offsetheave		= s[16]
+					offsetheading	= s[16]
+					gravity			= s[18]
+					depthc_o	= s[13]
 
-			sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
-			# print (idx, sensor.name)
+				#skip the disabled sensors
+				if sensordisabled != 0:
+					continue
 
-			self.sensors.append(sensor)
+				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
+				# print (idx, sensor.name)
+
+				self.sensors.append(sensor)
+		except:
+			print("oops, reading header sensor problem.  will continue (this is not a problem)")
 
 		# thats the header complete. we can now advance to the datagrams...
 		#the header has a pointer to the start of the data, so lets set the file pointer there now.		
@@ -538,10 +547,24 @@ class SBDReader:
 		return bytesRemaining
 
 	#########################################################################################
-	def loadNavigation(self):
+	def getfirstcoordinate(self):
+		'''we sometimes need to guess the EPSG and for that we need the first coordinate in the file so read it and quit'''
+		self.rewind()
+		while self.moreData() > 0:
+			category, decoded = self.readdatagram()
+
+			if category == self.POSITION: # 8
+				sensorid, msgtimestamp, sensor, rawdata = decoded
+				self.rewind()
+				return (msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro'])
+		return 0,0,0,0
+
+	#########################################################################################
+	def loadnavigation(self, step=1):
 		
 		navigation = []
 		navigation2 = []
+		previoustimestamp = 0
 		self.rewind()
 		start_time = time.time() # time the process
 		while self.moreData() > 0:
@@ -553,8 +576,11 @@ class SBDReader:
 
 			if category == self.POSITION: # 8
 				sensorid, msgtimestamp, sensor, rawdata = decoded
-				navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
-				navigation2.append(sensor)
+				if msgtimestamp  - previoustimestamp >= step:
+					navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
+					navigation2.append(sensor)
+					previoustimestamp = msgtimestamp
+
 				# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 				# nmeastring=rawdata.decode('utf-8').rstrip('\x00')
 				# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
@@ -571,7 +597,8 @@ def to_timestamp(dateObject):
 	return (dateObject - datetime(1970, 1, 1)).total_seconds()
 
 def from_timestamp(unixtime):
-	return datetime.utcfromtimestamp(unixtime)
+	# return datetime.utcfromtimestamp(unixtime)
+	return datetime.fromtimestamp(unixtime, tz=timezone.utc)
 
 #########################################################################################
 #########################################################################################
