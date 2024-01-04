@@ -60,19 +60,19 @@ Done
 * make sbd a pip installable package
 * loadnavigation now returns a dictionary as well as a flat list
 * removed dependency on refraction and r2sonic decode
+* to make a sensible loadnavigation function we need WGS84 coordinates.  unfortunately the sbd position datagrams only have decoded positions in easting, northing, so we need the user to specify epsg code so we can convert back to lat/lon
+* make pygeodesy_survey a pip installable package
+* implement a refraction computation to permit high quality conversions in python
+* convert raw bathy range/traveltime to Dx,Dz
 
 2Do
 ===
-* make pygeodesy_survey a pip installable package
-
-* produce a laz file from the sbd file MBES data.
-* convert raw bathy range/traveltime to Dx,Dz
+* implement support for MRZ datagrams from EM2040 sytems
 * apply current roll to the take off angles in RT-->Dxz calculation
-* implement a refraction computation to permit high quality conversions in python
+* produce a laz file from the sbd file MBES data.
 * convert Dxz to east/north/depth point cloud
 * convert point cloud to laz file
 * implement -s to make a summary of the file contents to a json string
-* to make a sensible loadnavigation function we need WGS84 coordinates.  unfortunately the sbd position datagrams only have decoded positions in easting, northing, so we need the user to specify epsg code so we can convert back to lat/lon
 * some of the fields in the msgheader are still unknown.  I am sure they are there for a reason!
 * figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack from the eiva developers!
 
