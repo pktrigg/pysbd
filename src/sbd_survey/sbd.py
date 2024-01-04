@@ -32,7 +32,7 @@ def main():
 	# filename = "C:/sampledata/sbd_srov/231120002308.SBD"
 	# filename = "c:/sampledata/sbd/Langenuen_SBD_North_v1/01_sbd/J354N003.SBD"
 	filename = "C:/sampledata/sbd/badposition/J354N018.SBD"
-	# filename =  "C:/sampledata/sbd_srov/231120002308.SBD"
+	filename =  "C:/sampledata/sbd_srov/231120002308.SBD"
 	process(filename)	
 		
 ###############################################################################
@@ -90,7 +90,7 @@ def process (filename):
 ####################################################################################################################
 ####################################################################################################################
 class SENSOR:
-	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0, offsetheave = 0):
+	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
 
 		self.id 			= id
 		self.name 			= name
@@ -105,7 +105,7 @@ class SENSOR:
 		self.offsetheading 	= offsetheading
 		self.offsetroll 	= offsetroll
 		self.offsetpitch 	= offsetpitch
-		self.offsetheave 	= offsetheave
+		# self.offsetheave 	= offsetheave
 
 	#print the contents of the class
 	def __str__(self):
@@ -247,9 +247,9 @@ class SBDFILEHDR:
 					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
 					stopbits 		= s[7]
 					latency			= s[9]
-					offsetx			= s[10]
-					offsety			= s[11]
-					offsetz			= s[12]
+					offsetx			= s[11]
+					offsety			= s[12]
+					offsetz			= s[13]
 					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
@@ -273,9 +273,9 @@ class SBDFILEHDR:
 					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
 					stopbits 		= s[7]
 					latency			= s[9]
-					offsetx			= s[10]
-					offsety			= s[11]
-					offsetz			= s[12]
+					offsetx			= s[11]
+					offsety			= s[12]
+					offsetz			= s[13]
 					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
@@ -299,9 +299,9 @@ class SBDFILEHDR:
 					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
 					stopbits 		= s[7]
 					latency			= s[9]
-					offsetx			= s[10]
-					offsety			= s[11]
-					offsetz			= s[12]
+					offsetx			= s[11]
+					offsety			= s[12]
+					offsetz			= s[13]
 					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
@@ -314,7 +314,7 @@ class SBDFILEHDR:
 				if sensordisabled != 0:
 					continue
 
-				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch, offsetheave)
+				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
 				# print (idx, sensor.name)
 
 				self.sensors.append(sensor)
