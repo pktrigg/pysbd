@@ -90,9 +90,9 @@ def process (geo, filename):
 		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
 		# 	print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
 		
-		if category == reader.BATHY:  # 4
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
+		# if category == reader.BATHY:  # 4
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
 
 		# if category == reader.POSITION: # 8
 		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
@@ -128,8 +128,8 @@ def process (geo, filename):
 				# if the process duration is greater than 1 second then update the progress bar
 				update_progress("Creating Point Cloud", reader.fileptr.tell() / reader.filesize)
 				
-				if int(time.time() - start_time)  > 5:
-					break
+				# if int(time.time() - start_time)  > 5:
+				# 	break
 
 
 			#debug to make it quick
@@ -162,6 +162,9 @@ def process (geo, filename):
 	writer.writeHeader()
 	writer.close()
 
+	#replace filename suffix with .laz
+	import os
+
 	outfilename = zip(outfilename)
 	print("Complete reading SBD file :-) %s " % (outfilename))
 	print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
@@ -189,8 +192,9 @@ def update_progress(job_title, progress):
 
 ###############################################################################
 def zip(filespec):
-	'''zip every las files in a folder'''
-	outfilename = fileutils.createoutputfilename(filespec, ".laz")
+	'''zip every las file'''
+
+	outfilename = os.path.splitext(outfilename)[0] + '.laz'
 	cmd = "laszip.exe" + \
 		" -i %s" % (filespec) + \
 		" -o %s" % (outfilename) + \
