@@ -671,7 +671,17 @@ class geodesy:
 		else:
 			return ""
 
+	###############################################################################
+	def calculateRangeBearingFromGeographicals(self, longitude1, latitude1,  longitude2,  latitude2):
+			dist, alpha1Tp2, alpha21 = calculateRangeBearingFromGeographicals(longitude1, latitude1,  longitude2,  latitude2 )
+			return dist, alpha1Tp2
 
+	###############################################################################
+	def calculateRangeBearingFromGrid(self, x1, y1,  x2,  y2):
+			dist, alpha1Tp2 = calculateRangeBearingFromGridPosition(x1, y1,  x2,  y2 )
+			return dist, alpha1Tp2
+
+###############################################################################
 # Test driver
 
 if __name__ == "__main__" :

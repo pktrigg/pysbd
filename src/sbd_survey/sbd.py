@@ -48,6 +48,9 @@ def process (filename):
 		if category == reader.GYRO:
 			sensorid, msgtimestamp, sensor, rawdata = decoded
 			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+			# increment the record count for this sensor using the categroy list
+			reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
+
 
 		if category == reader.MOTION: # 3
 			sensorid, msgtimestamp, sensor, rawdata = decoded
@@ -96,12 +99,13 @@ def process (filename):
 ####################################################################################################################
 ####################################################################################################################
 class SENSOR:
-	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
+	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, sensorpriority=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
 
 		self.id 			= id
 		self.name 			= name
 		self.sensorcategory	= sensorcategory
 		self.sensortype 	= sensortype
+		self.sensorpriority	= sensorpriority
 		self.ipaddress		= ipaddress
 		self.porttype 		= porttype
 		self.port 			= port
@@ -111,6 +115,7 @@ class SENSOR:
 		self.offsetheading 	= offsetheading
 		self.offsetroll 	= offsetroll
 		self.offsetpitch 	= offsetpitch
+		self.recordcount 	= 0
 		# self.offsetheave 	= offsetheave
 
 	#print the contents of the class
@@ -213,6 +218,12 @@ class SBDFILEHDR:
 				sensorname 		= hdr[8].decode('utf-8').rstrip('\x00')
 				porttype		= hdr[9]
 				# print("sensorname %s disabled %d" % (sensorname, sensordisabled))
+
+				#calculate the sensor priority by looping through the sensors list and counting how many sensors have the same category
+				sensorpriority = 0
+				for sensor in self.sensors:
+					if sensor.sensorcategory == sensorcategory:
+						sensorpriority += 1
 
 				#now we need to read the rest of the structure based on the port type		
 				if porttype == 1: # serial ports...
@@ -328,12 +339,26 @@ class SBDFILEHDR:
 				if sensordisabled != 0:
 					continue
 
-				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
+				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, sensorpriority, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
 				# print (idx, sensor.name)
 
 				self.sensors.append(sensor)
 		except:
 			print("oops, reading header sensor problem.  will continue (this is not a problem)")
+
+		#put the sensors into a new set of lists based on category field so we can assign datagrams to the correct sensor
+		self.sensorsbycategory = {}
+		for sensor in self.sensors:
+			if sensor.sensorcategory not in self.sensorsbycategory:
+				self.sensorsbycategory[sensor.sensorcategory] = []
+			self.sensorsbycategory[sensor.sensorcategory].append(sensor)
+
+		# print out the sensors by category
+		for category in self.sensorsbycategory:
+			print("Category %d" % (category))
+			for sensor in self.sensorsbycategory[category]:
+				print(sensor)
+			
 
 		# thats the header complete. we can now advance to the datagrams...
 		#the header has a pointer to the start of the data, so lets set the file pointer there now.		
@@ -420,6 +445,8 @@ class SBDReader:
 
 		# when assuming header is using bytes...
 		sensorid 					= msghdr[0]
+		print("sensorid %d" % (sensorid))	
+
 		unknown1 					= msghdr[1]
 		unknown2 					= msghdr[2]
 		unknown3 					= msghdr[3]
