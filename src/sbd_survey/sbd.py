@@ -10,17 +10,15 @@ import pprint
 import struct
 import time
 from datetime import datetime, timezone
-
-
-# local imports
 from pathlib import Path
-import sys
-# path_root = Path(__file__).parents[2]
+
+# local imports #################
 path_root = Path(__file__).parent
 sys.path.append(str(path_root))
 
 # import r2sonicdecode
 # import refraction
+import kmall
 
 # from sbd_survey import r2sonicdecode
 # from sbd_survey import refraction
@@ -31,7 +29,7 @@ def main():
 	# filename = "C:/ggtools/sbd_survey/J355N001.SBD"
 	# filename = "C:/sampledata/sbd_srov/231120002308.SBD"
 	# filename = "c:/sampledata/sbd/Langenuen_SBD_North_v1/01_sbd/J354N003.SBD"
-	filename = "C:/sampledata/sbd/badposition/J354N018.SBD"
+	# filename = "C:/sampledata/sbd/badposition/J354N018.SBD"
 	filename =  "C:/sampledata/sbd_srov/231120002308.SBD"
 	process(filename)	
 		
@@ -66,7 +64,8 @@ def process (filename):
 		if category == reader.ECHOSOUNDER: # 9
 			sensorid, msgtimestamp, sensor, rawdata = decoded
 			# print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
-			# if rawdata[0:4] == b'BTH0':
+			if rawdata[0:4] == b'BTH0':
+				print("R2sonic Echosounder located: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
 				#this is how we decode the BTH0 datagram from r2sonic 
 				# BTHDatagram = r2sonicdecode.BTH0(rawdata)
 				# depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
@@ -78,6 +77,13 @@ def process (filename):
 					# using the  sensor gyro, easting, northing compute the positon on the sealfoor
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+			if rawdata[4:8] == b'#MRZ':
+				print("Kongsberg EM KMALL Echosounder located: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+				# lets decode the MRZ datagram...
+				mrz = kmall.RANGEDEPTH(None, 0)
+				datagram = mrz.decode(rawdata)
+				print(datagram)
+
 
 	navigation, navigation2 = reader.loadnavigation()
 	for n in navigation:
@@ -117,10 +123,10 @@ class SBDFILEHDR:
 
 		self.sensors = []
 
-		#header is 60 bytes...
-		SBDFileHdr_fmt = '<30h'
-		# SBDFileHdr_fmt = '<2H 2L 24h'
-		SBDFileHdr_len = struct.calcsize(SBDFileHdr_fmt)
+		#header is 64 bytes...
+		# SBDFileHdr_fmt = '<30h'
+		SBDFileHdr_fmt = '<3L 26H'
+		SBDFileHdr_len = struct.calcsize(SBDFileHdr_fmt) # 64 bytes, probably more like 64 bytes
 		SBDFileHdr_unpack = struct.Struct(SBDFileHdr_fmt).unpack_from
 
 		data = fileptr.read(SBDFileHdr_len)
@@ -128,22 +134,25 @@ class SBDFILEHDR:
 		# turn the unpack below
 
 		self.header = {
-			'sensorcount'		: s[7],
-			'datastartbyte'		: s[8],
-			'year'				: s[10],
-			'month'				: s[11],
-			'day'				: s[13],
-			'hour'				: s[14],
-			'minute'			: s[15],
-			'second'			: s[16],
-			'millisecond'		: s[17],
-			'version'			: s[19],
+			'version1'			: s[0],
+			'unknown'			: s[1],
+			'timestamp'			: s[2],
+			'timestampmicrosecs': s[3],
+			'sensorcount'		: s[4],
+			'datastartbyte'		: s[5],
+			'year'				: s[7],
+			'month'				: s[8],
+			'day'				: s[10],
+			'hour'				: s[11],
+			'minute'			: s[12],
+			'second'			: s[13],
+			'millisecond'		: s[14],
+			'version'			: s[16],
+			'unknownfromhereonwards': s[17],
 		}
 		self.date = datetime (self.header['year'], self.header['month'], self.header['day'], self.header['hour'], self.header['minute'], self.header['second'], self.header['millisecond'])
 
-		# print("File Name %s " % (fileptr.name))
-		# print("File Version %s " % (self.header['version']))
-		# print("File Start Date %s " % (self.date))
+		# bytes 64 to 366 are unknown.  empty on the sample files we have
 
 		#geodesy is at offset 366 (80 bytes)
 		fileptr.seek(366, 0)
@@ -163,11 +172,7 @@ class SBDFILEHDR:
 		data = fileptr.read(msg_len)
 		s = msg_unpack(data)
 		self.projection = s[0].decode('utf-8').rstrip('\x00')
-		# print (self.projection)
-		
-		#each sensor definition takes 256 bytes.  
-		#looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
-		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
+		# print (self.projection)		
 
 		# count		type,	un,	cat,	disabl,	un,un,un,un,name
 		# 0 	0	(3,  	0, 	0,  	0, 		0, 0, 0, 0, b'NMEA ZDA\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 1)
@@ -186,6 +191,9 @@ class SBDFILEHDR:
 		# x 	13	(2,  	0, 	11, 	1, 		0, 0, 0, 0, b'TSS 340/440/440mm\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 0)
 
 		# print("Header Instrument record at byte offset: %d " % (fileptr.tell()))
+		#each sensor definition takes 256 bytes.  
+		#looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
+		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
 		fileptr.seek(1060, 0)
 		try:
 			for idx in range(0,self.header['sensorcount'] + 1):
@@ -193,7 +201,7 @@ class SBDFILEHDR:
 				msg_len 		= struct.calcsize(msg_fmt)
 				msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 				data 			= fileptr.read(msg_len)
-				hdr 				= msg_unpack(data)
+				hdr 			= msg_unpack(data)
 				sensortype		= hdr[0] # as per instruments.xml file in naviscan folder
 				unknown1		= hdr[1]
 				sensorcategory	= hdr[2]
@@ -214,22 +222,25 @@ class SBDFILEHDR:
 					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 					data 			= fileptr.read(msg_len)
 					s 				= msg_unpack(data)
-					# sensordisabled 		= s[0]
+					ipaddress = str("0.0.0.0")
+					unknown			= s[0]
 					port 			= s[1]
+					unknown			= s[2]
 					baud 			= s[3]
 					parity 			= s[4]
 					databits 		= s[5]
 					stopbits 		= s[6]
-					ipaddress = str("0.0.0.0")
+					unknown			= s[7]
 					latency			= s[8]
+					unknown			= s[9]
 					offsetx			= s[10]
 					offsety			= s[11]
 					offsetz			= s[12]
-					depthc_o	= s[13]
+					unknown			= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
 					offsetheading	= s[16]
-					# offsetheave		= s[16]
+					unknown			= s[17]
 					gravity			= s[18]
 
 				elif porttype == 2: # UDP ports...
@@ -239,24 +250,27 @@ class SBDFILEHDR:
 					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 					data 			= fileptr.read(msg_len)
 					s 				= msg_unpack(data)
+					unknown			= s[0]
 					portnumber 		= s[1]
+					unknown			= s[2]
+					unknown			= s[3]
 					ip1 			= s[4]
 					ip2 			= s[5]
 					ip3 			= s[6]
 					ip4 			= s[7]
 					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-					stopbits 		= s[7]
+					unknown			= s[8]
 					latency			= s[9]
+					unknown			= s[10]
 					offsetx			= s[11]
 					offsety			= s[12]
 					offsetz			= s[13]
-					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
 					offsetheading	= s[16]
-					# offsetheave		= s[16]
+					unknown			= s[17]
 					gravity			= s[18]
-					depthc_o	= s[13]
+					depthc_o		= s[13]
 
 				elif porttype == 4: # ATTU ports...
 					msg_fmt 		= '<2H 6B 11f 80H'
@@ -265,24 +279,26 @@ class SBDFILEHDR:
 					msg_unpack 		= struct.Struct(msg_fmt).unpack_from
 					data 			= fileptr.read(msg_len)
 					s 				= msg_unpack(data)
+					unknown			= s[0]
 					portnumber 		= s[1]
+					unknown			= s[2]
+					unknown			= s[3]
 					ip1 			= s[4]
 					ip2 			= s[5]
 					ip3 			= s[6]
 					ip4 			= s[7]
 					ipaddress = str("%d.%d.%d.%d" % (ip1, ip2, ip3, ip4))
-					stopbits 		= s[7]
+					unknown			= s[8]
 					latency			= s[9]
+					unknown			= s[10]
 					offsetx			= s[11]
 					offsety			= s[12]
 					offsetz			= s[13]
-					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
-					# offsetheave		= s[16]
 					offsetheading	= s[16]
+					unknown			= s[17]
 					gravity			= s[18]
-					depthc_o	= s[13]
 
 				else: # anything else
 					msg_fmt 		= '<2H 6B 11f 80H'
@@ -302,13 +318,11 @@ class SBDFILEHDR:
 					offsetx			= s[11]
 					offsety			= s[12]
 					offsetz			= s[13]
-					# offsetheading	= s[13]
 					offsetroll		= s[14]
 					offsetpitch		= s[15]
-					# offsetheave		= s[16]
 					offsetheading	= s[16]
+					unknown1		= s[17]
 					gravity			= s[18]
-					depthc_o	= s[13]
 
 				#skip the disabled sensors
 				if sensordisabled != 0:

@@ -64,6 +64,7 @@ Done
 * make pygeodesy_survey a pip installable package
 * implement a refraction computation to permit high quality conversions in python
 * convert raw bathy range/traveltime to Dx,Dz
+* add support for EM MRZ datagrams
 
 2Do
 ===
@@ -73,8 +74,9 @@ Done
 * convert Dxz to east/north/depth point cloud
 * convert point cloud to laz file
 * implement -s to make a summary of the file contents to a json string
-* some of the fields in the msgheader are still unknown.  I am sure they are there for a reason!
-* figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack from the eiva developers!
+* 2 fields in the file msgheader are still unknown.  I am sure they are there for a reason!
+* a fsome of the fields in the sensor msgheader are still unknown.  I am sure they are there for a reason!
+* figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack. we can modulus the category to identify the sequence number in the sensor list, but this seems fragile!
 
 ```
 	reader = sbd.SBDReader(filename)

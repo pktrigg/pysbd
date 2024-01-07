@@ -1,18 +1,18 @@
 import os
 import sys
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 
 # when developing locally use this...
-# sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
-# import sbd
-# import r2sonicdecode
-# import refraction
+sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
+import sbd
+import r2sonicdecode
+import refraction
 
-# when installed use this...
-from sbd_survey import sbd
-from sbd_survey import r2sonicdecode
-from sbd_survey import refraction
+# # when installed use this...
+# from sbd_survey import sbd
+# from sbd_survey import r2sonicdecode
+# from sbd_survey import refraction
 
 ###############################################################################
 def main():
@@ -62,9 +62,9 @@ def main():
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
-	navigation = reader.loadNavigation()
-	# for n in navigation:
-		# print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
+	navigation, navigation2 = reader.loadnavigation()
+	for n in navigation:
+		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
 
 	reader.close()
 	print("Complete reading SBD file :-)")
@@ -76,7 +76,8 @@ def to_timestamp(dateObject):
 	return (dateObject - datetime(1970, 1, 1)).total_seconds()
 
 def from_timestamp(unixtime):
-	return datetime.utcfromtimestamp(unixtime)
+	# return datetime.utcfromtimestamp(unixtime)
+	return datetime.fromtimestamp(unixtime, tz=timezone.utc)
 
 #########################################################################################
 #########################################################################################

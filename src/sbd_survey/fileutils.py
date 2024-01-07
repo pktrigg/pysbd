@@ -16,13 +16,13 @@ def main(*opargs, **kwargs):
 	f.write("gg")
 	f.close()
 	print(filename)
-	filename = createOutputFileName(filename, ext="")
+	filename = createoutputfilename(filename, ext="")
 	print(filename)
 
-	filename = createOutputFileName(filename, ext="")
+	filename = createoutputfilename(filename, ext="")
 	print(filename)
 
-	filename = createOutputFileName(filename, ext="")
+	filename = createoutputfilename(filename, ext="")
 	print(filename)
 
 	return
@@ -70,7 +70,7 @@ def renamefileextension(filename, newextension):
 	return outfilename
 
 ###############################################################################
-def createOutputFileName(path, ext=""):
+def createoutputfilename(path, ext=""):
 	'''Create a valid output filename. if the name of the file already exists the file name is auto-incremented.'''
 	path = os.path.expanduser(path)
 	if not os.path.exists(os.path.dirname(path)):
@@ -100,7 +100,7 @@ def createOutputFileName(path, ext=""):
 ###############################################################################
 
 # ###############################################################################
-# def createOutputFileName(path):
+# def createoutputfilename(path):
 # 	'''Create a valid output filename. if the name of the file already exists the file name is auto-incremented.'''
 # 	path	  = os.path.expanduser(path)
 
