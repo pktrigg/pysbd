@@ -60,10 +60,10 @@ def process (geo, filename):
 	# logging rate in mBps megabytes per second
 	# length of survey coverage in metres
 	
-	# print ( "Processing file:", filename)
+	print ( "Processing file:", filename)
 	reader = sbd.SBDReader(filename)
-	reader.SBDfilehdr.printsensorconfiguration()
-
+	reader.summarise()
+	
 	start_time = time.time() # time  the process
 
 	# now extract the navigation so we can correctly place the pings and beams as the ping coordinates only update when new navigation appears
@@ -75,42 +75,50 @@ def process (geo, filename):
 	print("Line Length: %.3f, Bearing %.3f" % (geo.calculateRangeBearingFromGrid(nav[0][1], nav[0][2], nav[-1][1], nav[-1][2])))
 	
 	duration = (nav[-1][0] - nav[0][0])
-	print("Duration: %.3f seconds" % (duration))
-	print("Logging Rate: %.3f Mega BYTES per second" % (reader.filesize / duration / 1024 / 1024))
+	print("Aquisition Duration: %.3f seconds" % (duration))
+	print("Logging Rate: %.3f MegaBYTES per second" % (reader.filesize / duration / 1024 / 1024))
 
 	while reader.moreData():
 		category, decoded = reader.readdatagram()
-		print(category)
-		if category == reader.GYRO:
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+		sensorid = decoded[0]
+		if sensorid is not None:
+			reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
 
-		if category == reader.MOTION: # 3
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
+		# print(category)
+		# if category == reader.GYRO:
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+		# 	reader.SBDFILEHDR.sensorcategory['category'][sensorid] += 1
+
+		# if category == reader.MOTION: # 3
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
 		
-		if category == reader.BATHY:  # 4
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
+		# if category == reader.BATHY:  # 4
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
 
-		if category == reader.POSITION: # 8
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+		# if category == reader.POSITION: # 8
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
 
-		if category == reader.ECHOSOUNDER: # 9
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			# print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+		# if category == reader.ECHOSOUNDER: # 9
+		# 	sensorid, msgtimestamp, sensor, rawdata = decoded
+		# 	# print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
 
 		# if the process duration is greater than 1 second then update the progress bar
-		update_progress("Creating Point Cloud", reader.fileptr.tell() / reader.filesize)
+		update_progress("Scanning", reader.fileptr.tell() / reader.filesize)
 				
 		# if int(time.time() - start_time)  > 5:
 		# 	break
 
 	reader.close()
 
+
 	print("Complete reading SBD file :-) %s " % (filename))
 	print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
+
+	reader.SBDfilehdr.printsensorconfiguration()
 
 ####################################################################################################################
 

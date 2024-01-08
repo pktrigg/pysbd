@@ -65,18 +65,18 @@ Done
 * implement a refraction computation to permit high quality conversions in python
 * convert raw bathy range/traveltime to Dx,Dz
 * add support for EM MRZ datagrams
+* figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack. we can modulus the category to identify the sequence number in the sensor list, but this seems fragile!
+* implement -s to make a summary of the file contents to a json string
+* implement support for MRZ datagrams from EM2040 sytems
+* convert point cloud to laz file
 
 2Do
 ===
-* implement support for MRZ datagrams from EM2040 sytems
 * apply current roll to the take off angles in RT-->Dxz calculation
 * produce a laz file from the sbd file MBES data.
 * convert Dxz to east/north/depth point cloud
-* convert point cloud to laz file
-* implement -s to make a summary of the file contents to a json string
 * 2 fields in the file msgheader are still unknown.  I am sure they are there for a reason!
-* a fsome of the fields in the sensor msgheader are still unknown.  I am sure they are there for a reason!
-* figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack. we can modulus the category to identify the sequence number in the sensor list, but this seems fragile!
+* some of the fields in the sensor msgheader are still unknown.  I am sure they are there for a reason!
 
 ```
 	reader = sbd.SBDReader(filename)

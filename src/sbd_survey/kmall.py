@@ -37,9 +37,9 @@ import statistics
 import geodetic
 import mbes
 
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import proj3d
-from matplotlib.colors import LightSource
+# import matplotlib.pyplot as plt
+# from mpl_toolkits.mplot3d import proj3d
+# from matplotlib.colors import LightSource
 	
 ###########################################################################
 def main():

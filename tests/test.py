@@ -6,8 +6,6 @@ from datetime import datetime, timezone
 # when developing locally use this...
 sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
 import sbd
-import r2sonicdecode
-import refraction
 
 # # when installed use this...
 # from sbd_survey import sbd
@@ -49,14 +47,14 @@ def main():
 		if category == reader.ECHOSOUNDER: # 9
 			sensorid, msgtimestamp, sensor, rawdata = decoded
 			print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
-			if rawdata[0:4] == b'BTH0':
+			# if rawdata[0:4] == b'BTH0':
 				#this is how we decode the BTH0 datagram from r2sonic 
-				BTHDatagram = r2sonicdecode.BTH0(rawdata)
-				depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
+				# BTHDatagram = r2sonicdecode.BTH0(rawdata)
+				# depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
 
 				# for all the beams in the decoded datagram compute the depth
-				for idx, angle in enumerate(BTHDatagram.angles):
-					depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
+				# for idx, angle in enumerate(BTHDatagram.angles):
+					# depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
 					# print("Beam %d Angle %.3f Range %.3f Depth %.3f acrosstrack %.3f " % (idx, BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth, acrosstrack))
 					# using the  sensor gyro, easting, northing compute the positon on the sealfoor
 					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))

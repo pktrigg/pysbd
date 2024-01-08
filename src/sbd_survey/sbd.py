@@ -45,12 +45,13 @@ def process (filename):
 
 	while reader.moreData():
 		category, decoded = reader.readdatagram()
+		
+		sensorid = decoded[0]
+		reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
 		if category == reader.GYRO:
 			sensorid, msgtimestamp, sensor, rawdata = decoded
 			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
 			# increment the record count for this sensor using the categroy list
-			reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
-
 
 		if category == reader.MOTION: # 3
 			sensorid, msgtimestamp, sensor, rawdata = decoded
@@ -99,13 +100,14 @@ def process (filename):
 ####################################################################################################################
 ####################################################################################################################
 class SENSOR:
-	def __init__(self, id=0, porttype=0, name="", sensorcategory=0, sensortype=0, sensorpriority=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
+	def __init__(self, idx=0, porttype=0, name="", sensorcategory=0, sensortype=0, sensorid=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
 
-		self.id 			= id
+		self.idx 			= idx
+		self.sensorid		= sensorid
 		self.name 			= name
 		self.sensorcategory	= sensorcategory
 		self.sensortype 	= sensortype
-		self.sensorpriority	= sensorpriority
+		# self.sensorpriority	= sensorpriority
 		self.ipaddress		= ipaddress
 		self.porttype 		= porttype
 		self.port 			= port
@@ -219,11 +221,11 @@ class SBDFILEHDR:
 				porttype		= hdr[9]
 				# print("sensorname %s disabled %d" % (sensorname, sensordisabled))
 
-				#calculate the sensor priority by looping through the sensors list and counting how many sensors have the same category
-				sensorpriority = 0
+				#calculate the sensor id by looping through the sensors list and counting how many sensors have the same category
+				sensorid = 0
 				for sensor in self.sensors:
 					if sensor.sensorcategory == sensorcategory:
-						sensorpriority += 1
+						sensorid += 1
 
 				#now we need to read the rest of the structure based on the port type		
 				if porttype == 1: # serial ports...
@@ -339,7 +341,7 @@ class SBDFILEHDR:
 				if sensordisabled != 0:
 					continue
 
-				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, sensorpriority, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
+				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, sensorid, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
 				# print (idx, sensor.name)
 
 				self.sensors.append(sensor)
@@ -354,10 +356,10 @@ class SBDFILEHDR:
 			self.sensorsbycategory[sensor.sensorcategory].append(sensor)
 
 		# print out the sensors by category
-		for category in self.sensorsbycategory:
-			print("Category %d" % (category))
-			for sensor in self.sensorsbycategory[category]:
-				print(sensor)
+		# for category in self.sensorsbycategory:
+		# 	print("Category %d" % (category))
+		# 	for sensor in self.sensorsbycategory[category]:
+		# 		print(sensor)
 			
 
 		# thats the header complete. we can now advance to the datagrams...
@@ -368,9 +370,13 @@ class SBDFILEHDR:
 	#########################################################################################
 	def printsensorconfiguration(self):
 		#print the sensor definitions
+		# for sensor in self.sensors:
+		# 	print (sensor)
+		print("                Name 	Cat	ID	OffsetX	OffsetY	OffsetZ	OffsetP	OffsetR	OffsetH	RecordCount")
+		
 		for sensor in self.sensors:
-			print (sensor)
-
+			print("%20s	%d	%d	%.3f	%.3f	%.3f	%.3f	%.3f	%.3f	%d" % (sensor.name, sensor.sensorcategory, sensor.sensorid, sensor.offsetx, sensor.offsety, sensor.offsetz, sensor.offsetpitch, sensor.offsetroll, sensor.offsetheading, sensor.recordcount))
+		return
 	#########################################################################################
 	def __str__(self):
 		return (pprint.pformat(vars(self)))
@@ -383,7 +389,7 @@ class SBDReader:
 	# hdr_fmt = '<2L 2L L'
 	# hdr_fmt = '<4H 2L L'
 	# hdr_fmt = '<2L 2L L'
-	hdr_fmt = '<L 4B 2L L'
+	hdr_fmt = '<L L 2L L'
 	hdr_len = struct.calcsize(hdr_fmt)
 	hdr_unpack = struct.Struct(hdr_fmt).unpack_from
 
@@ -444,22 +450,23 @@ class SBDReader:
 		msghdr = self.hdr_unpack(data)
 
 		# when assuming header is using bytes...
-		sensorid 					= msghdr[0]
-		print("sensorid %d" % (sensorid))	
+		category 					= msghdr[0]
+		# print("cat %d" % category)	
 
 		unknown1 					= msghdr[1]
 		unknown2 					= msghdr[2]
 		unknown3 					= msghdr[3]
 		unknown3 					= msghdr[4]
-		msgunixtimeseconds 			= msghdr[5]
-		msgunixtimemicroseconds 	= msghdr[6]
+		msgunixtimeseconds 			= msghdr[2]
+		msgunixtimemicroseconds 	= msghdr[3]
 		msgtimestamp 				= msgunixtimeseconds + (msgunixtimemicroseconds / 1000000)
-		msglen 						= msghdr[7] #we know this works...!!!!
+		msglen 						= msghdr[4] #we know this works...!!!!
 
 		if msglen == 0:
 			return None, [None, None, None, None]
 		try:
-			category = sensorid % 256
+			sensorid = category // 256
+			category = category % 256
 			# if more than 256 is the secondary system we need to deal with this correctly but dont have enough informat at present so assume they are all primary
 		except:
 			category = 0
@@ -498,7 +505,7 @@ class SBDReader:
 			self.sensor['roll'] = roll
 			self.sensor['pitch'] = pitch
 			self.sensor['heave'] = heave
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			return category, [  sensorid, msgtimestamp, self.sensor, rawdata]
 		
 		elif category == self.BATHY: # 4
 			msg_fmt 	= '< 3f L' + str(msglen-16) + 's'
@@ -513,7 +520,7 @@ class SBDReader:
 			rawdata 	= s1[4]
 			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['depth'] = depth
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			return category, [  sensorid,msgtimestamp, self.sensor, rawdata]
 		
 		elif category == self.AUXILIARY: # 5
 			msg_fmt 	= '< f' + str(msglen-4) + 's'
@@ -528,7 +535,7 @@ class SBDReader:
 			rawdata 	= s1[1]
 			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['velocity'] = velocity
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			return category, [ sensorid, msgtimestamp, self.sensor, rawdata]
 		
 		elif category == self.POSITION: # 8
 			msg_fmt = '< 2d L' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data pkpk the 3rd word could be a long int??
@@ -544,7 +551,7 @@ class SBDReader:
 			self.sensor['timestamp'] = msgtimestamp
 			self.sensor['easting'] = easting
 			self.sensor['northing'] = northing
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			return category, [ sensorid,msgtimestamp, self.sensor, rawdata]
 
 		elif category == self.ECHOSOUNDER: # 9
 			#for a MBES there is no decoded section.  its just the raw bytes, starting with BTH0 for a reson 2024 or MRZ
@@ -563,7 +570,7 @@ class SBDReader:
 			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
 		
 		else:
-			print("OOPS sensorid %d not found, skipping bytes %d" % (sensorid, msglen))
+			print("OOPS sensorid %d not found, skipping bytes %d" % (category, msglen))
 			data = self.fileptr.read(msglen)
 			return None, [None, None, None, None]
 
@@ -631,6 +638,52 @@ class SBDReader:
 		# print("Get navigation Range Duration %.3fs" % (time.time() - start_time)) # print the processing time.
 		return (navigation, navigation2)
 
+	###############################################################################
+	def summarise (self):
+		#open the SBD file for reading by creating a new SBDFReader class and passin in the filename to open.  we can then summarise the contents of the file.
+		# filename
+		# start, end, duration
+		# sensor table
+		# number of packets of each sensor type
+		# logging rate in mBps megabytes per second
+		# length of survey coverage in metres
+		
+		print ( "Processing file:", self.filename)
+		self.rewind()
+
+		start_time = time.time() # time  the process
+
+		# now extract the navigation so we can correctly place the pings and beams as the ping coordinates only update when new navigation appears
+		nav, nav2 = self.loadnavigation()
+
+		# calculate the line length from the first and last navigation records
+		print("First Nav Record: %s %.3f %.3f" % (from_timestamp(nav[0][0]), nav[0][1], nav[0][2]))
+		print("Last Nav Record: %s %.3f %.3f" % (from_timestamp(nav[-1][0]), nav[-1][1], nav[-1][2]))
+		# print("Line Length: %.3f, Bearing %.3f" % (geo.calculateRangeBearingFromGrid(nav[0][1], nav[0][2], nav[-1][1], nav[-1][2])))
+		
+		duration = (nav[-1][0] - nav[0][0])
+		print("Aquisition Duration: %.3f seconds" % (duration))
+		print("Logging Rate: %.3f MegaBYTES per second" % (self.filesize / duration / 1024 / 1024))
+
+		while self.moreData() > 0:
+			category, decoded = self.readdatagram()
+			sensorid = decoded[0]
+			if sensorid is not None:
+				self.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
+
+			# if the process duration is greater than 1 second then update the progress bar
+			update_progress("Scanning", self.fileptr.tell() / self.filesize)
+					
+			# if int(time.time() - start_time)  > 5:
+			# 	break
+
+		print("Complete reading SBD file :-) %s " % (self.filename))
+		print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
+
+		self.SBDfilehdr.printsensorconfiguration()
+
+####################################################################################################################
+
 ###############################################################################
 # TIME HELPER FUNCTIONS
 ###############################################################################
@@ -640,6 +693,17 @@ def to_timestamp(dateObject):
 def from_timestamp(unixtime):
 	# return datetime.utcfromtimestamp(unixtime)
 	return datetime.fromtimestamp(unixtime, tz=timezone.utc)
+
+###############################################################################
+def update_progress(job_title, progress):
+	'''progress value should be a value between 0 and 1'''
+	length = 20 # modify this to change the length
+	block = int(round(length*progress))
+	msg = "\r{0}: [{1}] {2}%".format(job_title, "#"*block + "-"*(length-block), round(progress*100, 2))
+	if progress >= 1: msg += " DONE\r\n"
+	sys.stdout.write(msg)
+	sys.stdout.flush()
+
 
 #########################################################################################
 #########################################################################################

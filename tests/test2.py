@@ -9,7 +9,7 @@ from argparse import ArgumentParser
 sys.path.append(str(Path(__file__).parent.parent / "src/sbd_survey"))
 import sbd
 import r2sonicdecode
-import refraction
+# import refraction
 import fileutils
 
 # # when installed use this...
