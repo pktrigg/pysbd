@@ -62,11 +62,19 @@ def main():
 
 	geo = geodetic.geodesy(EPSGCode=args.epsg)
 
-	# for filename in files:
-		# process(args, geo, filename)	
+	##########################
+	#now process the files....
+	##########################
+	start_time = time.time() # time  the process
+
+	if args.summary:
+		for idx, filename in enumerate(files):
+			reader = sbd.SBDReader(filename)
+			reader.summarise()
+		exit(0)
 
 	tasks = []
-	update_progress("Converting SBD to LAZ", (0))
+	update_progress("Converting SBD to LAS", (0))
 	for idx, filename in enumerate(files):
 		# root = os.path.splitext(os.path.expanduser(os.path.basename(filename)))[0]
 		# lasoutfilename = os.path.join(os.path.dirname(filename), root + ".las").replace('\\','/')
@@ -79,7 +87,6 @@ def main():
 		tasks.append([args, geo, filename])
 		# gsf2las.convert(filename, outfilename, args.epsg)	
 		# update_progress("Converting GSF to LAS", (1))
-	args.cpu = '1'
 
 	if args.cpu == '1':
 		for idx, task in enumerate(tasks):
@@ -98,6 +105,8 @@ def main():
 		pool.close()
 		pool.join()
 		update_progress("Converting GSF to LAS", (1))
+
+	print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
 
 # ################################################################################
 # def getcpucount(requestedcpu):
@@ -139,15 +148,13 @@ def sbd2las(args, geo, filename, taskid=0):
 	
 	print ( "Processing file:", filename)
 	reader = sbd.SBDReader(filename)
-	reader.SBDfilehdr.printsensorconfiguration()
-	if args.summary:
-		reader.summarise()
-		return
+	# reader.SBDfilehdr.printsensorconfiguration()
 
-	print ("Processing with Position Sensor:	%s" % (reader.SBDfilehdr.sensorsbycategory[reader.POSITION][int(args.positionsensorid)].name))
-	print ("Processing with Bathy Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.BATHY][int(args.bathysensorid)].name))
-	print ("Processing with Gyro Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.GYRO][int(args.gyrosensorid)].name))
-	print ("Processing with Motion Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.MOTION][int(args.motionsensorid)].name))
+	if taskid == 0:
+		print ("Processing with Position Sensor:	%s" % (reader.SBDfilehdr.sensorsbycategory[reader.POSITION][int(args.positionsensorid)].name))
+		print ("Processing with Bathy Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.BATHY][int(args.bathysensorid)].name))
+		print ("Processing with Gyro Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.GYRO][int(args.gyrosensorid)].name))
+		print ("Processing with Motion Sensor:		%s" % (reader.SBDfilehdr.sensorsbycategory[reader.MOTION][int(args.motionsensorid)].name))
 
 	start_time = time.time() # time  the process
 
@@ -180,7 +187,7 @@ def sbd2las(args, geo, filename, taskid=0):
 	tsy = timeseries.cTimeSeries(timestamps, list_y)
 	tsz = timeseries.cTimeSeries(timestamps, list_z)
 
-	print("Loading Point Cloud...")
+	# print("Loading Point Cloud...")
 	pointcloud = mbes.Cpointcloud()
 
 	while reader.moreData():
@@ -221,7 +228,8 @@ def sbd2las(args, geo, filename, taskid=0):
 				pointcloud.add(t, a, x, y, z, i, q)
 
 				# if the process duration is greater than 1 second then update the progress bar
-				update_progress("Creating Point Cloud", reader.fileptr.tell() / reader.filesize)
+				if taskid == 0:
+					update_progress("Creating Point Cloud", reader.fileptr.tell() / reader.filesize)
 				
 				# if int(time.time() - start_time)  > 2:
 					# break
@@ -271,8 +279,8 @@ def sbd2las(args, geo, filename, taskid=0):
 	outfilenamelaz = zip(outfilename)
 	if os.path.exists(outfilenamelaz):
 		os.remove(outfilename)
-	print("Complete reading SBD file :-) %s " % (outfilename))
-	print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
+	# print("Complete reading SBD file :-) %s " % (outfilename))
+	# print ("Duration %.3fs" % (time.time() - start_time)) # print the processing time.
 
 	return taskid
 ####################################################################################################################
