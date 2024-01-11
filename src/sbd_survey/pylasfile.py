@@ -212,7 +212,7 @@ class laswriter:
 		'''
 		compute the bounding box of all records in the list
 		'''
-		rounding = 3 #9
+		rounding = 3 #9 pkpkpk need 9 for geograpcical coords
 		zrounding = 3
 		self.hdr.MaxX = self.round_up(max(self.x), rounding)
 		self.hdr.MinX = self.round_down(min(self.x), rounding)
@@ -242,10 +242,11 @@ class laswriter:
 		# self.hdr.MaxZ = max(self.z) 
 		# self.hdr.MinZ = min(self.z) 
 
-		self.hdr.Xoffset = self.hdr.MinX 
+		self.hdr.Xoffset = self.hdr.MinX
 		self.hdr.Yoffset = self.hdr.MinY
 		self.hdr.Zoffset = self.hdr.MinZ
-
+		
+		
 		digit2, afterDP2 = self.precision_and_scale(self.hdr.MaxX - self.hdr.MinX)
 		self.hdr.Xscalefactor = 10**-(8-digit2)
 		self.hdr.Xscalefactor = 10**-(rounding)

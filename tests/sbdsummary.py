@@ -120,6 +120,8 @@ def process (geo, filename):
 
 	reader.SBDfilehdr.printsensorconfiguration()
 
+	return [duration, nav, reader.SBDFILEHDR.sensorcategory]
+
 ####################################################################################################################
 
 ###############################################################################

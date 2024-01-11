@@ -217,6 +217,7 @@ def decodeheader(s, obj):
 	obj.time_sec			= s[5]
 	obj.time_nanosec		= s[6]
 	obj.date 				= from_timestamp(obj.time_sec + obj.time_nanosec/1000000000)
+	obj.timestamp			= obj.time_sec + obj.time_nanosec/1000000000
 	return obj
 
 ###############################################################################
@@ -749,6 +750,8 @@ class cBeam:
 			# Reflectivity data (backscatter (BS) data).
 			self.meanAbsCoeff_dBPerkm 		= decodestructure[19]
 			self.reflectivity1_dB 			= decodestructure[20]
+			if self.detectionType == 2:
+				self.reflectivity1_dB = 0.0
 			self.reflectivity2_dB 			= decodestructure[21]
 			self.receiverSensitivityApplied_dB 	= decodestructure[22]
 			self.sourceLevelApplied_dB 			= decodestructure[23]
@@ -1234,7 +1237,7 @@ class RANGEDEPTH:
 
 		beams = []
 
-		timestamp = to_timestamp(self.date)
+		# timestamp = to_timestamp(self.date)
 		for i in range(self.numSoundingsMaxMain):
 			if len(rawbytes) == 0:
 				beambyteoffset = self.fileptr.tell() - self.offset	# remember where this packet resides in the DATAGRAM BYTES so we can modify if needed
@@ -1245,7 +1248,10 @@ class RANGEDEPTH:
 				# slice out the part we need... 268
 				s = struct.unpack_from(rec_fmt, rawbytes[rec_len1+rec_len2+rec_len3+rec_len4+(self.numTxSectors*rec_len5)+rec_len6+(self.numExtraDetections*rec_len7)+(i*rec_len8):])
 
-			beam = cBeam(timestamp, s, beambyteoffset)
+			beam = cBeam(self.timestamp, s, beambyteoffset)
+			#if the beam is rejected skipit
+			if beam.detectionType == 2:
+				continue
 			beams.append(beam)
 
 		self.beams = beams

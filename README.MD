@@ -68,13 +68,22 @@ Done
 * figure out why some category is 265 instead of 9. it looks like the secondary system has 256 added to the category but this seems a bit of a hack. we can modulus the category to identify the sequence number in the sensor list, but this seems fragile!
 * implement -s to make a summary of the file contents to a json string
 * implement support for MRZ datagrams from EM2040 sytems
+* produce a laz file from the sbd file KM MRZ MBES data.
 * convert point cloud to laz file
+* implement support for user to select sensors in creation of laz file
+* add category name to the sensor table summary
+* summary now lists sensor record count
+* improve handling of intensity data from KM into laz file
 
 2Do
 ===
+* implement clipping so we can reduce overlap in dual head misalingments
+* implement option to write intensity into depth field of laz file so we can try ggmatch
+* implement writing of time to laz file
+* add support for r2sonic BTH0 to laz file
 * apply current roll to the take off angles in RT-->Dxz calculation
-* produce a laz file from the sbd file MBES data.
 * convert Dxz to east/north/depth point cloud
+
 * 2 fields in the file msgheader are still unknown.  I am sure they are there for a reason!
 * some of the fields in the sensor msgheader are still unknown.  I am sure they are there for a reason!
 

@@ -53,9 +53,21 @@ import sys
 import os.path
 import pyproj
 from pyproj import CRS
+from scipy.spatial.transform import Rotation as R
 
 ###############################################################################
 def main():
+
+	offset=[1,0,0]
+	pitch=1
+	roll=0
+	heading=90
+	newcoordinates = rotate3d(offset, pitch, roll, heading)
+
+	position1=[0,0,0]
+	position2 = [position1[0]+newcoordinates[0], position1[1]+newcoordinates[1], position1[2]+newcoordinates[2] ]
+	print (newcoordinates)
+	print (position2)
 
 	# easting = 500000
 	# northing = 10000000
@@ -198,6 +210,36 @@ def medfilt (x, k):
 		y[:-j,-(i+1)] = x[j:]
 		y[-j:,-(i+1)] = x[-1]
 	return np.median (y, axis=1)
+
+
+
+###############################################################################
+# Apply this rotation to a set of vectors.
+# If the original frame rotates to the final frame by this rotation, then its application to a vector can be seen in two ways:
+# As a projection of vector components expressed in the final frame to the original frame.
+# As the physical rotation of a vector being glued to the original frame as it rotates. In this case the vector components are expressed in the original frame before and after the rotation.
+# In terms of rotation matricies, this application is the same as self.as_matrix().dot(vectors)
+# https://docs.scipy.org/doc/scipy/reference/generated/scipy.spatial.transform.Rotation.apply.html
+###############################################################################
+def rotate3d(offsetvector=[0,0,0], pitch=0, roll=0, heading=0):
+	'''
+	bow up == positive pitch in degrees, stbd up == positive roll in degrees, heading is true heading in degrees
+	position = 3D coordinate of origin
+	offset = 3D Dx, Dy, Dz for rotation
+	
+	'''
+	# heading = 00
+	# convert from math to compass rotation standard
+	hdg = 360-heading
+
+	r = R.from_euler('zxy', [hdg, pitch, roll], degrees=True)
+	newpos = r.apply(offsetvector)
+	print (newpos)
+	print ("origin" + str(offsetvector))
+	print ("X %.5f" % newpos[0])
+	print ("Y %.5f" % newpos[1])
+	print ("Z %.5f" % newpos[2])
+	return newpos
 
 ###############################################################################
 # from: http://mathforum.org/library/drmath/view/62034.html

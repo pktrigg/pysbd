@@ -44,32 +44,30 @@ def process (filename):
 	start_time = time.time() # time  the process
 
 	while reader.moreData():
-		category, decoded = reader.readdatagram()
-		
-		sensorid = decoded[0]
+		category, sensorid, decoded = reader.readdatagram()		
 		reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
 		if category == reader.GYRO:
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+			msgtimestamp, sensordata, rawdata = decoded
+			print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensordata['gyro']))
 			# increment the record count for this sensor using the categroy list
 
 		if category == reader.MOTION: # 3
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['roll'], sensor['pitch'], sensor['heave']))
+			msgtimestamp, sensordata, rawdata = decoded
+			print("Motion: %s %.3f %.3f %.3f" % (from_timestamp(msgtimestamp), sensordata['roll'], sensordata['pitch'], sensordata['heave']))
 		
 		if category == reader.BATHY:  # 4
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensor['depth']))
+			msgtimestamp, sensordata, rawdata = decoded
+			print("Depth: %s %.3f" % (from_timestamp(msgtimestamp), sensordata['depth']))
 
 		if category == reader.POSITION: # 8
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+			msgtimestamp, sensordata, rawdata = decoded
+			print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensordata['easting'], sensordata['northing']))
 
 		if category == reader.ECHOSOUNDER: # 9
-			sensorid, msgtimestamp, sensor, rawdata = decoded
-			# print("Echosounder: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+			msgtimestamp, sensordata, rawdata = decoded
+			# print("Echosounder: %s %s " % (sensordata['mbesname'], from_timestamp(msgtimestamp)))
 			if rawdata[0:4] == b'BTH0':
-				print("R2sonic Echosounder located: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+				print("R2sonic Echosounder located: %s %s " % (sensordata['mbesname'], from_timestamp(msgtimestamp)))
 				#this is how we decode the BTH0 datagram from r2sonic 
 				# BTHDatagram = r2sonicdecode.BTH0(rawdata)
 				# depth_velocity_profile = [(0, 1500), (100, 1500), (200, 1500)]  # Example profile
@@ -79,15 +77,14 @@ def process (filename):
 					# depth, acrosstrack = refraction.ray_trace_to_time(BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth_velocity_profile)
 					# print("Beam %d Angle %.3f Range %.3f Depth %.3f acrosstrack %.3f " % (idx, BTHDatagram.angles[idx], BTHDatagram.ranges[idx], depth, acrosstrack))
 					# using the  sensor gyro, easting, northing compute the positon on the sealfoor
-					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
-					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+					# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensordata['gyro']))
+					# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensordata['easting'], sensordata['northing']))
 			if rawdata[4:8] == b'#MRZ':
-				print("Kongsberg EM KMALL Echosounder located: %s %s " % (sensor['mbesname'], from_timestamp(msgtimestamp)))
+				print("Kongsberg EM KMALL Echosounder located: %s %s " % (sensordata['mbesname'], from_timestamp(msgtimestamp)))
 				# lets decode the MRZ datagram...
 				mrz = kmall.RANGEDEPTH(None, 0)
 				datagram = mrz.decode(rawdata)
 				print(datagram)
-
 
 	navigation, navigation2 = reader.loadnavigation()
 	for n in navigation:
@@ -100,12 +97,13 @@ def process (filename):
 ####################################################################################################################
 ####################################################################################################################
 class SENSOR:
-	def __init__(self, idx=0, porttype=0, name="", sensorcategory=0, sensortype=0, sensorid=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
+	def __init__(self, idx=0, porttype=0, name="", sensorcategory=0, sensorcategoryname=0, sensortype=0, sensorid=0, ipaddress="0.0.0.0", port=0, offsetx = 0, offsety = 0, offsetz = 0, offsetheading = 0, offsetroll = 0, offsetpitch = 0):
 
 		self.idx 			= idx
 		self.sensorid		= sensorid
 		self.name 			= name
 		self.sensorcategory	= sensorcategory
+		self.sensorcategoryname	= sensorcategoryname
 		self.sensortype 	= sensortype
 		# self.sensorpriority	= sensorpriority
 		self.ipaddress		= ipaddress
@@ -219,6 +217,32 @@ class SBDFILEHDR:
 				unknown6		= hdr[7]	
 				sensorname 		= hdr[8].decode('utf-8').rstrip('\x00')
 				porttype		= hdr[9]
+
+				if sensorcategory == SBDReader.BATHY:  # 4
+					sensorcategoryname = "BATHY"
+				if sensorcategory == SBDReader.GYRO:
+					sensorcategoryname = "GYRO"
+				if sensorcategory == SBDReader.MOTION: # 3
+					sensorcategoryname = "MOTION"
+				if sensorcategory == SBDReader.POSITION: # 8
+					sensorcategoryname = "POSITION"
+				if sensorcategory == SBDReader.ECHOSOUNDER: # 9
+					sensorcategoryname = "ECHOSOUNDER"
+				if sensorcategory == SBDReader.SIDESCAN: # 10
+					sensorcategoryname = "SIDESCAN"
+				if sensorcategory == SBDReader.PIPETRACKER: # 11
+					sensorcategoryname = "PIPETRACKER"
+				if sensorcategory == SBDReader.AUXILIARY: # 5
+					sensorcategoryname = "AUXILIARY"
+				if sensorcategory == SBDReader.RUNLINECONTROL: # 1
+					sensorcategoryname = "RUNLINECONTROL"
+				if sensorcategory == SBDReader.GNSSTIME: # 0
+					sensorcategoryname = "GNSSTIME"
+				if sensorcategory == SBDReader.RAWDATA: # 6
+					sensorcategoryname = "RAWDATA"
+				if sensorcategory == SBDReader.DOPPLER: # 7
+					sensorcategoryname = "DOPPLER"
+
 				# print("sensorname %s disabled %d" % (sensorname, sensordisabled))
 
 				#calculate the sensor id by looping through the sensors list and counting how many sensors have the same category
@@ -341,7 +365,7 @@ class SBDFILEHDR:
 				if sensordisabled != 0:
 					continue
 
-				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensortype, sensorid, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
+				sensor = SENSOR(idx, porttype, sensorname, sensorcategory, sensorcategoryname, sensortype, sensorid, ipaddress, port, offsetx, offsety, offsetz, offsetheading, offsetroll, offsetpitch)
 				# print (idx, sensor.name)
 
 				self.sensors.append(sensor)
@@ -372,10 +396,10 @@ class SBDFILEHDR:
 		#print the sensor definitions
 		# for sensor in self.sensors:
 		# 	print (sensor)
-		print("                Name 	Cat	ID	OffsetX	OffsetY	OffsetZ	OffsetP	OffsetR	OffsetH	RecordCount")
+		print("                Name 		CatName	Cat	ID	OffsetX	OffsetY	OffsetZ	OffsetP	OffsetR	OffsetH	RecordCount")
 		
 		for sensor in self.sensors:
-			print("%20s	%d	%d	%.3f	%.3f	%.3f	%.3f	%.3f	%.3f	%d" % (sensor.name, sensor.sensorcategory, sensor.sensorid, sensor.offsetx, sensor.offsety, sensor.offsetz, sensor.offsetpitch, sensor.offsetroll, sensor.offsetheading, sensor.recordcount))
+			print("%20s	%10s	%d	%d	%.3f	%.3f	%.3f	%.3f	%.3f	%.3f	%d" % (sensor.name, sensor.sensorcategoryname, sensor.sensorcategory, sensor.sensorid, sensor.offsetx, sensor.offsety, sensor.offsetz, sensor.offsetpitch, sensor.offsetroll, sensor.offsetheading, sensor.recordcount))
 		return
 	#########################################################################################
 	def __str__(self):
@@ -425,18 +449,18 @@ class SBDReader:
 		#the file is of a sensible size so open it.
 		self.SBDfilehdr = SBDFILEHDR(self.fileptr)
 
-		self.sensor = {}
-		self.sensor['timestamp'] = 0
-		self.sensor['gyro'] = 0
-		self.sensor['gyromc'] = 0
-		self.sensor['roll'] = 0
-		self.sensor['pitch'] = 0
-		self.sensor['heave'] = 0
-		self.sensor['depth'] = 0
-		self.sensor['velocity'] = 0
-		self.sensor['easting'] = 0
-		self.sensor['northing'] = 0
-		self.sensor['mbesname'] = ""
+		self.sensordata = {}
+		self.sensordata['timestamp'] = 0
+		self.sensordata['gyro'] = 0
+		self.sensordata['gyromc'] = 0
+		self.sensordata['roll'] = 0
+		self.sensordata['pitch'] = 0
+		self.sensordata['heave'] = 0
+		self.sensordata['depth'] = 0
+		self.sensordata['velocity'] = 0
+		self.sensordata['easting'] = 0
+		self.sensordata['northing'] = 0
+		self.sensordata['mbesname'] = ""
 
 	#########################################################################################
 	def readdatagram(self):
@@ -463,7 +487,7 @@ class SBDReader:
 		msglen 						= msghdr[4] #we know this works...!!!!
 
 		if msglen == 0:
-			return None, [None, None, None, None]
+			return None, None, [None, None, None]
 		try:
 			sensorid = category // 256
 			category = category % 256
@@ -472,7 +496,7 @@ class SBDReader:
 			category = 0
 			print("OOPS sensorid not found, skipping bytes %d" % (msglen))
 			self.fileptr.read(msglen)
-			return None, [None, None, None, None]
+			return None, None, [None, None, None]
 
 		if category == self.GYRO: # 2
 			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' 
@@ -484,10 +508,10 @@ class SBDReader:
 			gyro 		= s1[0]
 			gyromc 		= s1[2] 
 			rawdata 	= s1[4]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['gyro'] = gyro
-			self.sensor['gyromc'] = gyromc
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['gyro'] = gyro
+			self.sensordata['gyromc'] = gyromc
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 		
 		elif category == self.MOTION: # 3
 			msg_fmt 	= '< 3f 2H' + str(msglen-16) + 's' 
@@ -501,11 +525,11 @@ class SBDReader:
 			heave 		= s1[2] # verified
 			packetsize 	= s1[3]
 			rawdata 	= s1[4]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['roll'] = roll
-			self.sensor['pitch'] = pitch
-			self.sensor['heave'] = heave
-			return category, [  sensorid, msgtimestamp, self.sensor, rawdata]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['roll'] = roll
+			self.sensordata['pitch'] = pitch
+			self.sensordata['heave'] = heave
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 		
 		elif category == self.BATHY: # 4
 			msg_fmt 	= '< 3f L' + str(msglen-16) + 's'
@@ -518,9 +542,9 @@ class SBDReader:
 			unknown 	= s1[2]
 			# packetsize 	= s1[3]
 			rawdata 	= s1[4]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['depth'] = depth
-			return category, [  sensorid,msgtimestamp, self.sensor, rawdata]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['depth'] = depth
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 		
 		elif category == self.AUXILIARY: # 5
 			msg_fmt 	= '< f' + str(msglen-4) + 's'
@@ -533,9 +557,9 @@ class SBDReader:
 			# unknown 	= s1[2]
 			# packetsize= s1[3]
 			rawdata 	= s1[1]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['velocity'] = velocity
-			return category, [ sensorid, msgtimestamp, self.sensor, rawdata]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['velocity'] = velocity
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 		
 		elif category == self.POSITION: # 8
 			msg_fmt = '< 2d L' + str(msglen-20) + 's' # easting, northing, packetsize, 0, data pkpk the 3rd word could be a long int??
@@ -548,10 +572,10 @@ class SBDReader:
 			northing 	= s1[1]
 			packetsize 	= s1[2]
 			rawdata 	= s1[3]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['easting'] = easting
-			self.sensor['northing'] = northing
-			return category, [ sensorid,msgtimestamp, self.sensor, rawdata]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['easting'] = easting
+			self.sensordata['northing'] = northing
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 
 		elif category == self.ECHOSOUNDER: # 9
 			#for a MBES there is no decoded section.  its just the raw bytes, starting with BTH0 for a reson 2024 or MRZ
@@ -561,18 +585,18 @@ class SBDReader:
 			data 		= self.fileptr.read(msg_len)
 			s1 			= msg_unpack(data)
 			rawdata 	= s1[0]
-			self.sensor['timestamp'] = msgtimestamp
-			self.sensor['mbesname'] = rawdata[0:4]
+			self.sensordata['timestamp'] = msgtimestamp
+			self.sensordata['mbesname'] = rawdata[0:4]
 			#check to see if the rawdata first 4 bytes are BTH0
 			# if rawdata[0:4] == b'BTH0':
 			# 	#this is how we decode the BTH0 datagram
 			# 	BTHDatagram = r2sonicdecode.BTH0(rawdata)
-			return category, [sensorid, msgtimestamp, self.sensor, rawdata]
+			return category, sensorid, [msgtimestamp, self.sensordata, rawdata]
 		
 		else:
 			print("OOPS sensorid %d not found, skipping bytes %d" % (category, msglen))
 			data = self.fileptr.read(msglen)
-			return None, [None, None, None, None]
+			return None, None, [None, None, None]
 
 	#########################################################################################
 	def __str__(self):
@@ -602,41 +626,82 @@ class SBDReader:
 			category, decoded = self.readdatagram()
 
 			if category == self.POSITION: # 8
-				sensorid, msgtimestamp, sensor, rawdata = decoded
+				sensorid, msgtimestamp, sensordata, rawdata = decoded
 				self.rewind()
-				return (msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro'])
+				return (msgtimestamp, sensordata['easting'], sensordata['northing'], sensordata['gyro'])
 		return 0,0,0,0
 
 	#########################################################################################
-	def loadnavigation(self, step=1):
-		
+	def getfirstdepth(self, bathysensorid=0):
+		'''we sometimes need the first depth'''
+		self.rewind()
+		while self.moreData() > 0:
+			category, sensorid, decoded = self.readdatagram()
+			if category == self.BATHY:  # 4
+				if sensorid == bathysensorid:
+					# msgtimestamp, sensordata, rawdata = decoded
+					# print("Depth: %s %.3f sensor %d" % (from_timestamp(msgtimestamp), sensordata['depth'], sensorid))
+					self.rewind()
+					return (category,sensorid, decoded)
+		return None, None, None
+
+	#########################################################################################
+	def loadnavigation(self, step=1, positionsensorid=0, gyrosensorid=0, bathysensorid=0, motionsensorid=0):
+		'''navigation is a list of x,y,z,p,r,h'''		
 		navigation = []
-		navigation2 = []
+		x = 0
+		y = 0
+		z = 0
+		p = 0
+		r = 0
+		h = 0
+		# navigation2 = []
 		previoustimestamp = 0
 		self.rewind()
 		start_time = time.time() # time the process
+
+		# get the first depth so we have a valide depth in the nav table
+		category, sensorid, decoded = self.getfirstdepth(bathysensorid)
+		msgtimestamp, sensordata, rawdata = decoded
+		z = sensordata['depth']
+
 		while self.moreData() > 0:
-			category, decoded = self.readdatagram()
+			category, sensorid, decoded = self.readdatagram()
+
+			if category == self.BATHY:  # 4
+				if sensorid == bathysensorid:
+					msgtimestamp, sensordata, rawdata = decoded
+					z = sensordata['depth']
+					# print("Depth: %s %.3f sensor %d" % (from_timestamp(msgtimestamp), sensordata['depth'], sensorid))
 
 			if category == self.GYRO:
-				sensorid, msgtimestamp, sensor, rawdata = decoded
-				# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensor['gyro']))
+				if sensorid == gyrosensorid:
+					msgtimestamp, sensordata, rawdata = decoded
+					h = sensordata['gyro']
+				# print("Gyro: %s %.3f" % (from_timestamp(msgtimestamp), sensordata['gyro']))
+
+			if category == self.MOTION:
+				if sensorid == motionsensorid:
+					msgtimestamp, sensordata, rawdata = decoded
+					p = sensordata['pitch']
+					r = sensordata['roll']
 
 			if category == self.POSITION: # 8
-				sensorid, msgtimestamp, sensor, rawdata = decoded
-				if msgtimestamp  - previoustimestamp >= step:
-					navigation.append([msgtimestamp, sensor['easting'], sensor['northing'], sensor['gyro']])
-					navigation2.append(sensor)
-					previoustimestamp = msgtimestamp
+				msgtimestamp, sensordata, rawdata = decoded
+				if sensorid == positionsensorid:
+					if msgtimestamp  - previoustimestamp >= step:
+						navigation.append([msgtimestamp, sensordata['easting'], sensordata['northing'], z, p, r, h])
+						# navigation2.append(sensor)
+						previoustimestamp = msgtimestamp
 
-				# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensor['easting'], sensor['northing']))
+				# print("Position: %s %.3f %.3f" % (from_timestamp(msgtimestamp), sensordata['easting'], sensordata['northing']))
 				# nmeastring=rawdata.decode('utf-8').rstrip('\x00')
 				# nmeaobject = NMEAReader.parse(nmeastring,VALCKSUM=0)
 				# navigation.append([msgtimestamp, nmeaobject.lon, nmeaobject.lat, heading])
 
 		self.rewind()
 		# print("Get navigation Range Duration %.3fs" % (time.time() - start_time)) # print the processing time.
-		return (navigation, navigation2)
+		return (navigation)
 
 	###############################################################################
 	def summarise (self):
@@ -654,7 +719,7 @@ class SBDReader:
 		start_time = time.time() # time  the process
 
 		# now extract the navigation so we can correctly place the pings and beams as the ping coordinates only update when new navigation appears
-		nav, nav2 = self.loadnavigation()
+		nav = self.loadnavigation()
 
 		# calculate the line length from the first and last navigation records
 		print("First Nav Record: %s %.3f %.3f" % (from_timestamp(nav[0][0]), nav[0][1], nav[0][2]))
@@ -666,8 +731,7 @@ class SBDReader:
 		print("Logging Rate: %.3f MegaBYTES per second" % (self.filesize / duration / 1024 / 1024))
 
 		while self.moreData() > 0:
-			category, decoded = self.readdatagram()
-			sensorid = decoded[0]
+			category, sensorid, decoded = self.readdatagram()
 			if sensorid is not None:
 				self.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
 
