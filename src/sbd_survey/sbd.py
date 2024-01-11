@@ -31,6 +31,9 @@ def main():
 	# filename = "c:/sampledata/sbd/Langenuen_SBD_North_v1/01_sbd/J354N003.SBD"
 	# filename = "C:/sampledata/sbd/badposition/J354N018.SBD"
 	filename =  "C:/sampledata/sbd_srov/231120002308.SBD"
+
+	# filename =  "Y:/Subsea-Cloud/ReachDemo/download5BackscatterDemo/Block2-Raw_SBD/231117143725.SBD"
+
 	process(filename)	
 		
 ###############################################################################
@@ -44,7 +47,9 @@ def process (filename):
 	start_time = time.time() # time  the process
 
 	while reader.moreData():
-		category, sensorid, decoded = reader.readdatagram()		
+		category, sensorid, decoded = reader.readdatagram()
+		if category == None:
+			continue	
 		reader.SBDfilehdr.sensorsbycategory[category][sensorid].recordcount += 1
 		if category == reader.GYRO:
 			msgtimestamp, sensordata, rawdata = decoded
@@ -86,7 +91,7 @@ def process (filename):
 				datagram = mrz.decode(rawdata)
 				print(datagram)
 
-	navigation, navigation2 = reader.loadnavigation()
+	navigation = reader.loadnavigation()
 	for n in navigation:
 		print ("Date %s X: %.10f Y: %.10f Hdg: %.3f" % (from_timestamp(n[0]), n[1], n[2], n[3]))
 
@@ -130,7 +135,7 @@ class SBDFILEHDR:
 
 		#header is 64 bytes...
 		# SBDFileHdr_fmt = '<30h'
-		SBDFileHdr_fmt = '<3L 26H'
+		SBDFileHdr_fmt = '<3L 13H 26B'
 		SBDFileHdr_len = struct.calcsize(SBDFileHdr_fmt) # 64 bytes, probably more like 64 bytes
 		SBDFileHdr_unpack = struct.Struct(SBDFileHdr_fmt).unpack_from
 
@@ -199,6 +204,8 @@ class SBDFILEHDR:
 		#each sensor definition takes 256 bytes.  
 		#looks like the sensor definition starts at byte 1060 with an ID and then a type (hex 0x424)
 		#looks like sensor name is 32 bytes and the remaining 224 are not yet known
+		sensorcount = (self.header['datastartbyte'] - 1060) / 256
+		self.header['sensorcount'] = int(sensorcount)
 		fileptr.seek(1060, 0)
 		try:
 			for idx in range(0,self.header['sensorcount'] + 1):
@@ -667,7 +674,8 @@ class SBDReader:
 
 		while self.moreData() > 0:
 			category, sensorid, decoded = self.readdatagram()
-
+			if category == None:
+				continue
 			if category == self.BATHY:  # 4
 				if sensorid == bathysensorid:
 					msgtimestamp, sensordata, rawdata = decoded

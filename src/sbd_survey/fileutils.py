@@ -69,6 +69,11 @@ def renamefileextension(filename, newextension):
 
 	return outfilename
 
+
+###############################################################################
+def replacesuffix(path, ext=""):
+	outfilename = os.path.splitext(path)[0] + ext
+	return outfilename
 ###############################################################################
 def createoutputfilename(path, ext=""):
 	'''Create a valid output filename. if the name of the file already exists the file name is auto-incremented.'''

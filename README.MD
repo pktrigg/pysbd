@@ -74,9 +74,11 @@ Done
 * add category name to the sensor table summary
 * summary now lists sensor record count
 * improve handling of intensity data from KM into laz file
+* improve how we read sensor table in header.  now reads all sensors ok
 
 2Do
 ===
+* implement multicore procesing for laz conversions
 * implement clipping so we can reduce overlap in dual head misalingments
 * implement option to write intensity into depth field of laz file so we can try ggmatch
 * implement writing of time to laz file

@@ -9,11 +9,12 @@
             //"program": "src/sbd_pktrigg/sbd.py",
             "program": "${file}",
             "python": "python.exe",
-            "args": ["-i", "C:/sampledata/sbd_srov/231120000808.SBD", "-epsg", "32630"]
+            "args": ["-i", "Y:/Subsea-Cloud/ReachDemo/download5BackscatterDemo/Block2-Raw_SBD", "-epsg", "32630"]
         }
    ]
 }
 "args": ["-i", "C:/sampledata/sbd_srov/231120002308.SBD", "-epsg", "32630"]
 
+"args": ["-i", "C:/sampledata/sbd_srov/231120000808.SBD", "-epsg", "32630"]
 
 25830
