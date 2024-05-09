@@ -9,12 +9,13 @@
             //"program": "src/sbd_pktrigg/sbd.py",
             "program": "${file}",
             "python": "python.exe",
-            "args": ["-i", "Y:/Subsea-Cloud/ReachDemo/download5BackscatterDemo/Block2-Raw_SBD", "-epsg", "32630"]
+            "args": ["-i", "C:/sampledata/sbd/langenuen_SBD_North_v1/01_sbd/badposiiton/J354N018.SBD", "-epsg", "32632", "-cpu", "1"]
         }
-   ]
+    ]
 }
-"args": ["-i", "C:/sampledata/sbd_srov/231120002308.SBD", "-epsg", "32630"]
 
+"args": ["-i", "C:/sampledata/sbd_srov/231120002308.SBD", "-epsg", "32630", "-cpu", "1"]
+"args": ["-i", "Y:/Subsea-Cloud/ReachDemo/download5BackscatterDemo/Block2-Raw_SBD", "-epsg", "32630"]
 "args": ["-i", "C:/sampledata/sbd_srov/231120000808.SBD", "-epsg", "32630"]
 
 25830

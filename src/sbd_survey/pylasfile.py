@@ -74,43 +74,62 @@ def testwriter():
 class laswriter:
 	############################################################################
 	def __init__(self, filename, lasformat=1.4):
-		self.fileName = filename
-		self.fileptr = open(filename, 'wb+')
-		self.hdr = lashdr(lasformat)
+		self.fileName 	= filename
+		self.fileptr 	= open(filename, 'wb+')
+		self.hdr 		= lashdr(lasformat)
+
+		self.decimalplaces = 2
+		self.decimalplacez = 3
+		#for geographicals we need to use 9 decimal places
+		# self.decimalplaces = 9
 
 		# the lists of all the data we will populate, then write into whatever format the user desires.  
 		# these could be numpy arrays, but that introduces a dependency, so we will leave them as lists
-		self.x = []
-		self.y = []
-		self.z = []
-		self.intensity = []
-		self.returnnumber = []
-		self.numberreturns = []
-		self.scandirectionflag = []
-		self.edgeflightline = []
-		self.classification = []
-		self.scananglerank = []
-		self.userdata = []
-		self.pointsourceid = []
-		self.gpstime = []
-		self.red = []
-		self.green = []
-		self.blue = []
-		self.wavepacketdescriptorindex = []
-		self.byteoffsettowaveformdata = []
-		self.waveformpacketsize = []
-		self.returnpointwaveformlocation = []
-		self.wavex = []
-		self.wavey = []
-		self.wavez = []
-		self.nir = []
+		self.x 					= []
+		self.y 					= []
+		self.z 					= []
+		self.intensity 			= []
+		self.returnnumber 		= []
+		self.numberreturns 		= []
+		self.scandirectionflag 	= []
+		self.edgeflightline 	= []
+		self.classification 	= []
+		self.scananglerank 		= []
+		self.userdata 			= []
+		self.pointsourceid 		= []
+		self.gpstime 			= []
+		self.red 				= []
+		self.green 				= []
+		self.blue 				= []
+		self.wavepacketdescriptorindex 		= []
+		self.byteoffsettowaveformdata 		= []
+		self.waveformpacketsize 			= []
+		self.returnpointwaveformlocation 	= []
+		self.wavex 							= []
+		self.wavey 							= []
+		self.wavez 							= []
+		self.nir 							= []
 
-		self.classificationflags = []
-		self.scannerchannel = []
-		self.userdata = []
-		self.scanangle = []
+		self.classificationflags 			= []
+		self.scannerchannel 				= []
+		self.userdata 						= []
+		self.scanangle 						= []
 
 		self.supportedformats = self.hdr.getsuportedpointformats()
+
+	############################################################################
+	def setasgrid(self):
+		'''
+		if the las file is going to hold grid we need 2 decimal places
+		'''
+		self.decimalplaces = 2
+
+	############################################################################
+	def setasgeographics(self):
+		'''
+		if the las file is going to hold geographicals we need 9 decimal places
+		'''
+		self.decimalplaces = 9
 
 	############################################################################
 	def writeVLR_WKT(self, wkt=""):
@@ -198,71 +217,50 @@ class laswriter:
 
 	############################################################################
 	def round_up(self, n, decimals=0):
+		'''round a value UP'''
 		multiplier = 10 ** decimals
 		return math.ceil(n * multiplier) / multiplier
 
 	############################################################################
 	def round_down(self, n, decimals=0):
-
+		'''round a value DOWN'''
 		multiplier = 10 ** decimals
 		return math.floor(n * multiplier) / multiplier
 	
 	############################################################################
-	def computebbox_offsets(self):
+	def computebbox_offsets(self, decimalplaces=3):
 		'''
 		compute the bounding box of all records in the list
 		'''
-		rounding = 3 #9 pkpkpk need 9 for geograpcical coords
-		zrounding = 3
-		self.hdr.MaxX = self.round_up(max(self.x), rounding)
-		self.hdr.MinX = self.round_down(min(self.x), rounding)
+		self.decimalplaces = decimalplaces
+		self.decimalplaces = self.decimalplaces #3 #9 pkpkpk need 9 for geograpcical coords
+		self.decimalplacesz = 3
+		self.hdr.MaxX = self.round_up(max(self.x), self.decimalplaces)
+		self.hdr.MinX = self.round_down(min(self.x), self.decimalplaces)
 
-		self.hdr.MaxY = self.round_up(max(self.y), rounding)
-		self.hdr.MinY = self.round_down(min(self.y), rounding)
+		self.hdr.MaxY = self.round_up(max(self.y), self.decimalplaces)
+		self.hdr.MinY = self.round_down(min(self.y), self.decimalplaces)
 
-		self.hdr.MaxZ = self.round_up(max(self.z), rounding)
-		self.hdr.MinZ = self.round_down(min(self.z), rounding)
-
-		# self.hdr.MaxY = math.ceil(max(self.y))
-		# self.hdr.MinY = math.floor(min(self.y))
-
-		# self.hdr.MaxZ = math.ceil(max(self.z)) 
-		# self.hdr.MinZ = math.floor(min(self.z))
-
-		# xbuffer = (max(self.x) - min(self.x)) + (max(self.x) - min(self.x))/20
-		# ybuffer = (max(self.y) - min(self.y)) + (max(self.y) - min(self.y))/20
-		# zbuffer = (max(self.z) - min(self.z)) + (max(self.z) - min(self.z))/20
-
-		# self.hdr.MaxX = max(self.x) + xbuffer
-		# self.hdr.MinX = min(self.x) - xbuffer
-
-		# self.hdr.MaxY = max(self.y) + ybuffer
-		# self.hdr.MinY = min(self.y) - ybuffer
-
-		# self.hdr.MaxZ = max(self.z) 
-		# self.hdr.MinZ = min(self.z) 
+		self.hdr.MaxZ = self.round_up(max(self.z), self.decimalplaces)
+		self.hdr.MinZ = self.round_down(min(self.z), self.decimalplaces)
 
 		self.hdr.Xoffset = self.hdr.MinX
 		self.hdr.Yoffset = self.hdr.MinY
 		self.hdr.Zoffset = self.hdr.MinZ
 		
-		
 		digit2, afterDP2 = self.precision_and_scale(self.hdr.MaxX - self.hdr.MinX)
 		self.hdr.Xscalefactor = 10**-(8-digit2)
-		self.hdr.Xscalefactor = 10**-(rounding)
+		self.hdr.Xscalefactor = 10**-(self.decimalplaces)
 
 		digit2, afterDP2 = self.precision_and_scale(self.hdr.MaxY - self.hdr.MinY)
 		self.hdr.Yscalefactor = 10**-(8-digit2)
-		self.hdr.Yscalefactor = 10**-(rounding)
+		self.hdr.Yscalefactor = 10**-(self.decimalplaces)
 
 		digit2, afterDP2 = self.precision_and_scale(self.hdr.MaxZ - self.hdr.MinZ)
 		self.hdr.Zscalefactor = 10**-(8-digit2)
-		self.hdr.Zscalefactor = 10**-(zrounding)
+		self.hdr.Zscalefactor = 10**-(self.decimalplacesz)
 
-		# self.hdr.Xscalefactor = 0.000000001
-		# self.hdr.Yscalefactor = 0.000000001
-		# self.hdr.Zscalefactor = 0.01
-
+	###########################################################################
 	def precision_and_scale(self, x):
 		'''
 		compute the number of digits beafore and after the decimal place so we can accurately scale a float into an integer
@@ -294,31 +292,31 @@ class laswriter:
 	############################################################################
 	def fixemptylists(self):
 		if len(self.intensity) == 0: 
-			self.intensity = self.zerolistmaker(len(self.x))
+			self.intensity 			= self.zerolistmaker(len(self.x))
 		if len(self.returnnumber) == 0:
-			self.returnnumber = self.onelistmaker(len(self.x))
+			self.returnnumber 		= self.onelistmaker(len(self.x))
 		if len(self.numberreturns) == 0: 
-			self.numberreturns = self.onelistmaker(len(self.x))
+			self.numberreturns 		= self.onelistmaker(len(self.x))
 		if len(self.scandirectionflag) == 0: 
-			self.scandirectionflag = self.zerolistmaker(len(self.x))
+			self.scandirectionflag 	= self.zerolistmaker(len(self.x))
 		if len(self.edgeflightline) == 0: 
-			self.edgeflightline = self.zerolistmaker(len(self.x))
+			self.edgeflightline 	= self.zerolistmaker(len(self.x))
 		if len(self.classification) == 0: 
-			self.classification = self.zerolistmaker(len(self.x))
+			self.classification 	= self.zerolistmaker(len(self.x))
 		if len(self.scananglerank) == 0: 
-			self.scananglerank = self.zerolistmaker(len(self.x))
+			self.scananglerank 		= self.zerolistmaker(len(self.x))
 		if len(self.userdata) == 0: 
-			self.userdata = self.zerolistmaker(len(self.x))
+			self.userdata 			= self.zerolistmaker(len(self.x))
 		if len(self.pointsourceid) == 0: 
-			self.pointsourceid = self.zerolistmaker(len(self.x))
+			self.pointsourceid 		= self.zerolistmaker(len(self.x))
 		if len(self.gpstime) == 0: 
-			self.gpstime = self.zerolistmaker(len(self.x))
+			self.gpstime 			= self.zerolistmaker(len(self.x))
 		if len(self.red) == 0: 
-			self.red = self.zerolistmaker(len(self.x))
+			self.red 				= self.zerolistmaker(len(self.x))
 		if len(self.green) == 0: 
-			self.green = self.zerolistmaker(len(self.x))
+			self.green 				= self.zerolistmaker(len(self.x))
 		if len(self.blue) == 0: 
-			self.blue = self.zerolistmaker(len(self.x))
+			self.blue 				= self.zerolistmaker(len(self.x))
 		if len(self.wavepacketdescriptorindex) == 0: 
 			self.wavepacketdescriptorindex = self.zerolistmaker(len(self.x))
 		if len(self.byteoffsettowaveformdata) == 0: 
@@ -328,22 +326,22 @@ class laswriter:
 		if len(self.returnpointwaveformlocation) == 0: 
 			self.returnpointwaveformlocation = self.zerolistmaker(len(self.x))
 		if len(self.wavex) == 0: 
-			self.wavex = self.zerolistmaker(len(self.x))
+			self.wavex 				= self.zerolistmaker(len(self.x))
 		if len(self.wavey) == 0: 
-			self.wavey = self.zerolistmaker(len(self.x))
+			self.wavey 				= self.zerolistmaker(len(self.x))
 		if len(self.wavez) == 0: 
-			self.wavez = self.zerolistmaker(len(self.x))
+			self.wavez 				= self.zerolistmaker(len(self.x))
 		if len(self.nir) == 0: 
-			self.nir = self.zerolistmaker(len(self.x))
+			self.nir 				= self.zerolistmaker(len(self.x))
 
 		if len(self.classificationflags) == 0:
 			self.classificationflags = self.zerolistmaker(len(self.x))
 		if len(self.scannerchannel) == 0:
-			self.scannerchannel = self.zerolistmaker(len(self.x))
+			self.scannerchannel 	= self.zerolistmaker(len(self.x))
 		if len(self.userdata) == 0:
-			self.userdata = self.zerolistmaker(len(self.x))
+			self.userdata 			= self.zerolistmaker(len(self.x))
 		if len(self.scanangle) == 0:
-			self.scanangle = self.zerolistmaker(len(self.x))
+			self.scanangle 			= self.zerolistmaker(len(self.x))
 
 	############################################################################
 	def writepoints(self):

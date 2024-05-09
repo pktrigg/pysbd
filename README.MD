@@ -4,7 +4,7 @@ sbd_survey
 * by:            paul.kennedy@guardiangeomatics.com
 * description:   python module to read an SDB file
 * developed for Python version 3++
-
+  
 Notes
 ====
 The EIVA SBD file format is created by naviscan for acquisition of raw sensor data such as postion, motion, heading, sidescan and multibeam.  The file format is binary in nature.  unfortunately the file format specification is not published by EIVA (we asked) but we needed to access our data for automated QC immediately following acquisition and prior to processing in naviedit/navimodel.  

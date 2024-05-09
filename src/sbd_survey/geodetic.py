@@ -234,11 +234,11 @@ def rotate3d(offsetvector=[0,0,0], pitch=0, roll=0, heading=0):
 
 	r = R.from_euler('zxy', [hdg, pitch, roll], degrees=True)
 	newpos = r.apply(offsetvector)
-	print (newpos)
-	print ("origin" + str(offsetvector))
-	print ("X %.5f" % newpos[0])
-	print ("Y %.5f" % newpos[1])
-	print ("Z %.5f" % newpos[2])
+	# print (newpos)
+	# print ("origin" + str(offsetvector))
+	# print ("X %.5f" % newpos[0])
+	# print ("Y %.5f" % newpos[1])
+	# print ("Z %.5f" % newpos[2])
 	return newpos
 
 ###############################################################################

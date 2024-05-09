@@ -1,6 +1,7 @@
 import os
-import numpy as np
 import math
+import numpy as np
+from scipy import signal
 
 ###############################################################################
 def main():
@@ -39,6 +40,14 @@ class cTimeSeries:
 			self.times = np.array(timeOrTimeValue)
 			self.values = np.array(values)
 
+	###############################################################################
+	def spikefilter(self, weight=11, threshold=10):
+		'''use scipy.signal.savgol to remove outliers and smooth the values'''
+		# self.values = signal.savgol_filter(self.values, window_length=weight, polyorder=3, mode="nearest")
+		values = signal.medfilt(self.values, kernel_size=weight)
+		for idx, v in enumerate(values):
+			if abs(v - self.values[idx]) > threshold:
+				self.values[idx] = v
 	###############################################################################
 	def getValueAt(self, timestamp):
 		return np.interp(timestamp, self.times, self.values, left=None, right=None)
